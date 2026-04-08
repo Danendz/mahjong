@@ -1,0 +1,344 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "messages.schema.json",
+  "title": "WebSocket Messages",
+  "description": "Client-server message protocol for Wuhan Mahjong",
+  "definitions": {
+    "RoomConfig": {
+      "type": "object",
+      "properties": {
+        "score_cap": { "type": "integer", "enum": [200, 500, 1000, 0], "description": "0 = no cap" },
+        "open_call_mode": { "type": "string", "enum": ["koukou", "kaikou"], "description": "koukou=口口翻 (each call doubles), kaikou=开口翻 (any call doubles once)" },
+        "turn_timer": { "type": "integer", "enum": [10, 15, 20, 30], "description": "Seconds per turn" },
+        "reaction_timer": { "type": "integer", "enum": [5, 8, 10, 15], "description": "Seconds per reaction" },
+        "num_rounds": { "type": "integer", "enum": [4, 8, 16] }
+      },
+      "required": ["score_cap", "open_call_mode", "turn_timer", "reaction_timer", "num_rounds"]
+    },
+    "PlayerInfo": {
+      "type": "object",
+      "properties": {
+        "seat": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "nickname": { "type": "string", "maxLength": 32 },
+        "ready": { "type": "boolean" },
+        "connected": { "type": "boolean" }
+      },
+      "required": ["seat", "nickname", "ready", "connected"]
+    },
+    "MeldInfo": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["chi", "pong", "open_gang", "closed_gang", "add_gang"] },
+        "tiles": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } }
+      },
+      "required": ["type", "tiles"]
+    },
+    "ScoringMultiplier": {
+      "type": "object",
+      "properties": {
+        "reason": { "type": "string" },
+        "value": { "type": "integer" }
+      },
+      "required": ["reason", "value"]
+    },
+    "ScoringBreakdown": {
+      "type": "object",
+      "properties": {
+        "base_points": { "type": "integer" },
+        "multipliers": { "type": "array", "items": { "$ref": "#/definitions/ScoringMultiplier" } },
+        "total_per_loser": { "type": "integer" },
+        "capped": { "type": "boolean" }
+      },
+      "required": ["base_points", "multipliers", "total_per_loser", "capped"]
+    },
+
+    "ClientMessage": {
+      "oneOf": [
+        { "$ref": "#/definitions/JoinRoomMsg" },
+        { "$ref": "#/definitions/LeaveRoomMsg" },
+        { "$ref": "#/definitions/PlayerReadyMsg" },
+        { "$ref": "#/definitions/StartGameMsg" },
+        { "$ref": "#/definitions/ConfigureRoomMsg" },
+        { "$ref": "#/definitions/DiscardMsg" },
+        { "$ref": "#/definitions/ChiMsg" },
+        { "$ref": "#/definitions/PongMsg" },
+        { "$ref": "#/definitions/GangMsg" },
+        { "$ref": "#/definitions/HuMsg" },
+        { "$ref": "#/definitions/PassMsg" }
+      ]
+    },
+
+    "JoinRoomMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "join_room" },
+        "code": { "type": "string", "minLength": 6, "maxLength": 6 },
+        "nickname": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "session_token": { "type": "string" }
+      },
+      "required": ["type", "code", "nickname", "session_token"]
+    },
+    "LeaveRoomMsg": {
+      "type": "object",
+      "properties": { "type": { "const": "leave_room" } },
+      "required": ["type"]
+    },
+    "PlayerReadyMsg": {
+      "type": "object",
+      "properties": { "type": { "const": "player_ready" } },
+      "required": ["type"]
+    },
+    "StartGameMsg": {
+      "type": "object",
+      "properties": { "type": { "const": "start_game" } },
+      "required": ["type"]
+    },
+    "ConfigureRoomMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "configure_room" },
+        "config": { "$ref": "#/definitions/RoomConfig" }
+      },
+      "required": ["type", "config"]
+    },
+    "DiscardMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "discard" },
+        "tile": { "$ref": "tiles.schema.json#/definitions/TileCode" }
+      },
+      "required": ["type", "tile"]
+    },
+    "ChiMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "chi" },
+        "tiles": {
+          "type": "array",
+          "items": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": ["type", "tiles"]
+    },
+    "PongMsg": {
+      "type": "object",
+      "properties": { "type": { "const": "pong" } },
+      "required": ["type"]
+    },
+    "GangMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "gang" },
+        "gang_type": { "type": "string", "enum": ["open", "closed", "add"] },
+        "tile": { "$ref": "tiles.schema.json#/definitions/TileCode" }
+      },
+      "required": ["type", "gang_type", "tile"]
+    },
+    "HuMsg": {
+      "type": "object",
+      "properties": { "type": { "const": "hu" } },
+      "required": ["type"]
+    },
+    "PassMsg": {
+      "type": "object",
+      "properties": { "type": { "const": "pass" } },
+      "required": ["type"]
+    },
+
+    "ServerMessage": {
+      "oneOf": [
+        { "$ref": "#/definitions/RoomJoinedMsg" },
+        { "$ref": "#/definitions/PlayerJoinedMsg" },
+        { "$ref": "#/definitions/PlayerLeftMsg" },
+        { "$ref": "#/definitions/PlayerReadyServerMsg" },
+        { "$ref": "#/definitions/ConfigUpdatedMsg" },
+        { "$ref": "#/definitions/GameStartedMsg" },
+        { "$ref": "#/definitions/YourTurnMsg" },
+        { "$ref": "#/definitions/TileDiscardedMsg" },
+        { "$ref": "#/definitions/ReactionPromptMsg" },
+        { "$ref": "#/definitions/ActionResolvedMsg" },
+        { "$ref": "#/definitions/GangResultMsg" },
+        { "$ref": "#/definitions/RoundEndMsg" },
+        { "$ref": "#/definitions/GameStateMsg" },
+        { "$ref": "#/definitions/PlayerDisconnectedMsg" },
+        { "$ref": "#/definitions/PlayerReconnectedMsg" },
+        { "$ref": "#/definitions/ErrorMsg" }
+      ]
+    },
+
+    "RoomJoinedMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "room_joined" },
+        "room_id": { "type": "string", "format": "uuid" },
+        "code": { "type": "string" },
+        "your_seat": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "players": { "type": "array", "items": { "$ref": "#/definitions/PlayerInfo" } },
+        "config": { "$ref": "#/definitions/RoomConfig" }
+      },
+      "required": ["type", "room_id", "code", "your_seat", "players", "config"]
+    },
+    "PlayerJoinedMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "player_joined" },
+        "seat": { "type": "integer" },
+        "nickname": { "type": "string" }
+      },
+      "required": ["type", "seat", "nickname"]
+    },
+    "PlayerLeftMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "player_left" },
+        "seat": { "type": "integer" }
+      },
+      "required": ["type", "seat"]
+    },
+    "PlayerReadyServerMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "player_ready" },
+        "seat": { "type": "integer" }
+      },
+      "required": ["type", "seat"]
+    },
+    "ConfigUpdatedMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "config_updated" },
+        "config": { "$ref": "#/definitions/RoomConfig" }
+      },
+      "required": ["type", "config"]
+    },
+    "GameStartedMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "game_started" },
+        "your_hand": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } },
+        "dealer_seat": { "type": "integer" },
+        "laizi_indicator": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "laizi_tile": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "wall_remaining": { "type": "integer" }
+      },
+      "required": ["type", "your_hand", "dealer_seat", "laizi_indicator", "laizi_tile", "wall_remaining"]
+    },
+    "YourTurnMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "your_turn" },
+        "drawn_tile": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "time_limit": { "type": "integer" },
+        "wall_remaining": { "type": "integer" },
+        "can_gang": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } },
+        "can_hu": { "type": "boolean" }
+      },
+      "required": ["type", "drawn_tile", "time_limit", "wall_remaining", "can_gang", "can_hu"]
+    },
+    "TileDiscardedMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "tile_discarded" },
+        "seat": { "type": "integer" },
+        "tile": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "wall_remaining": { "type": "integer" }
+      },
+      "required": ["type", "seat", "tile", "wall_remaining"]
+    },
+    "ReactionPromptMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "reaction_prompt" },
+        "tile": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "from_seat": { "type": "integer" },
+        "available_actions": { "type": "array", "items": { "type": "string", "enum": ["chi", "pong", "gang", "hu", "pass"] } },
+        "chi_options": { "type": "array", "items": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" }, "minItems": 2, "maxItems": 2 } },
+        "time_limit": { "type": "integer" }
+      },
+      "required": ["type", "tile", "from_seat", "available_actions", "time_limit"]
+    },
+    "ActionResolvedMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "action_resolved" },
+        "seat": { "type": "integer" },
+        "action": { "type": "string" },
+        "tiles_revealed": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } },
+        "next_turn_seat": { "type": "integer" }
+      },
+      "required": ["type", "seat", "action", "tiles_revealed", "next_turn_seat"]
+    },
+    "GangResultMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "gang_result" },
+        "seat": { "type": "integer" },
+        "gang_type": { "type": "string", "enum": ["open", "closed", "add"] },
+        "tile": { "$ref": "tiles.schema.json#/definitions/TileCode" }
+      },
+      "required": ["type", "seat", "gang_type"]
+    },
+    "RoundEndMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "round_end" },
+        "result": { "type": "string", "enum": ["hu", "draw"] },
+        "winner_seat": { "type": ["integer", "null"] },
+        "winning_hand": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } },
+        "winning_tile": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "win_type": { "type": "string", "enum": ["self_draw", "discard", "rob_kong"] },
+        "scoring": { "$ref": "#/definitions/ScoringBreakdown" },
+        "score_deltas": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "total_scores": { "type": "object", "additionalProperties": { "type": "integer" } }
+      },
+      "required": ["type", "result", "score_deltas", "total_scores"]
+    },
+    "GameStateMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "game_state" },
+        "your_seat": { "type": "integer" },
+        "your_hand": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } },
+        "open_melds": { "type": "object", "additionalProperties": { "type": "array", "items": { "$ref": "#/definitions/MeldInfo" } } },
+        "discards": { "type": "object", "additionalProperties": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } } },
+        "tile_counts": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "current_turn_seat": { "type": "integer" },
+        "laizi_indicator": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "laizi_tile": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "wall_remaining": { "type": "integer" },
+        "total_scores": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "dealer_seat": { "type": "integer" },
+        "turn_time_remaining": { "type": "integer" }
+      },
+      "required": ["type", "your_seat", "your_hand", "open_melds", "discards", "tile_counts", "current_turn_seat", "laizi_indicator", "laizi_tile", "wall_remaining", "total_scores", "dealer_seat"]
+    },
+    "PlayerDisconnectedMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "player_disconnected" },
+        "seat": { "type": "integer" },
+        "timeout_seconds": { "type": "integer" }
+      },
+      "required": ["type", "seat", "timeout_seconds"]
+    },
+    "PlayerReconnectedMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "player_reconnected" },
+        "seat": { "type": "integer" }
+      },
+      "required": ["type", "seat"]
+    },
+    "ErrorMsg": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "error" },
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "required": ["type", "code", "message"]
+    }
+  }
+}

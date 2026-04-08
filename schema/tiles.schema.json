@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tiles.schema.json",
+  "title": "Mahjong Tiles",
+  "description": "Tile definitions for Wuhan Mahjong (武汉麻将)",
+  "definitions": {
+    "SuitedTileValue": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9
+    },
+    "Suit": {
+      "type": "string",
+      "enum": ["m", "s", "p"],
+      "description": "m=万(Characters), s=条(Bamboo), p=筒(Dots)"
+    },
+    "WindCode": {
+      "type": "string",
+      "enum": ["we", "ws", "ww", "wn"],
+      "description": "we=东(East), ws=南(South), ww=西(West), wn=北(North)"
+    },
+    "DragonCode": {
+      "type": "string",
+      "enum": ["dz", "df", "db"],
+      "description": "dz=红中(Red), df=发财(Green), db=白板(White)"
+    },
+    "TileCode": {
+      "type": "string",
+      "description": "String code for a tile type. Suited: {value}{suit} e.g. '1m','5p','9s'. Winds: 'we','ws','ww','wn'. Dragons: 'dz','df','db'.",
+      "enum": [
+        "1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m",
+        "1s", "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s",
+        "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p",
+        "we", "ws", "ww", "wn",
+        "dz", "df", "db"
+      ]
+    },
+    "TileInstance": {
+      "type": "string",
+      "description": "Unique tile instance: {TileCode}_{copy} where copy is 0-3. e.g. '5m_0', '5m_3'",
+      "pattern": "^(([1-9][msp])|(w[ensw])|(d[zfb]))_[0-3]$"
+    },
+    "LaiziSequence": {
+      "type": "object",
+      "description": "Mapping from indicator tile to laizi (wild card) tile",
+      "properties": {
+        "1m": { "const": "2m" }, "2m": { "const": "3m" }, "3m": { "const": "4m" },
+        "4m": { "const": "5m" }, "5m": { "const": "6m" }, "6m": { "const": "7m" },
+        "7m": { "const": "8m" }, "8m": { "const": "9m" }, "9m": { "const": "1m" },
+        "1s": { "const": "2s" }, "2s": { "const": "3s" }, "3s": { "const": "4s" },
+        "4s": { "const": "5s" }, "5s": { "const": "6s" }, "6s": { "const": "7s" },
+        "7s": { "const": "8s" }, "8s": { "const": "9s" }, "9s": { "const": "1s" },
+        "1p": { "const": "2p" }, "2p": { "const": "3p" }, "3p": { "const": "4p" },
+        "4p": { "const": "5p" }, "5p": { "const": "6p" }, "6p": { "const": "7p" },
+        "7p": { "const": "8p" }, "8p": { "const": "9p" }, "9p": { "const": "1p" },
+        "we": { "const": "ws" }, "ws": { "const": "ww" }, "ww": { "const": "wn" },
+        "wn": { "const": "df" },
+        "dz": { "const": "df" }, "df": { "const": "db" }, "db": { "const": "we" }
+      }
+    },
+    "Valid258Pair": {
+      "type": "string",
+      "description": "Valid tiles for the pair (将) in a winning hand — must be 2, 5, or 8 of any suit",
+      "enum": ["2m", "5m", "8m", "2s", "5s", "8s", "2p", "5p", "8p"]
+    }
+  }
+}

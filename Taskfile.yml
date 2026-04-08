@@ -1,0 +1,98 @@
+version: '3'
+
+vars:
+  FRONTEND_DIR: ./frontend
+  BACKEND_DIR: ./backend
+
+tasks:
+  # ============ Development ============
+
+  dev:
+    desc: Start everything for local development
+    deps: [dev:frontend, dev:backend]
+
+  dev:frontend:
+    desc: Start Vue dev server
+    dir: '{{.FRONTEND_DIR}}'
+    cmd: pnpm dev
+
+  dev:backend:
+    desc: Start Go backend + PostgreSQL via Docker
+    cmd: docker compose up --build
+
+  # ============ Build ============
+
+  build:
+    desc: Build both frontend and backend
+    deps: [build:frontend, build:backend]
+
+  build:frontend:
+    desc: Build Vue frontend for production
+    dir: '{{.FRONTEND_DIR}}'
+    cmd: pnpm build
+
+  build:backend:
+    desc: Build Go backend binary
+    dir: '{{.BACKEND_DIR}}'
+    cmd: go build -o bin/server ./cmd/server
+
+  # ============ Type Generation ============
+
+  generate:
+    desc: Generate Go + TypeScript types from JSON Schema
+    cmd: ./scripts/generate-types.sh
+
+  # ============ Database ============
+
+  db:up:
+    desc: Start PostgreSQL only
+    cmd: docker compose up postgres -d
+
+  db:down:
+    desc: Stop PostgreSQL
+    cmd: docker compose down
+
+  db:reset:
+    desc: Reset database (destroy volume and recreate)
+    cmds:
+      - docker compose down -v
+      - docker compose up postgres -d
+
+  # ============ Code Quality ============
+
+  lint:
+    desc: Lint both frontend and backend
+    deps: [lint:frontend, lint:backend]
+
+  lint:frontend:
+    desc: Type-check Vue frontend
+    dir: '{{.FRONTEND_DIR}}'
+    cmd: pnpm vue-tsc --noEmit
+
+  lint:backend:
+    desc: Vet Go backend
+    dir: '{{.BACKEND_DIR}}'
+    cmd: go vet ./...
+
+  test:
+    desc: Run all tests
+    deps: [test:frontend, test:backend]
+
+  test:frontend:
+    desc: Run frontend tests
+    dir: '{{.FRONTEND_DIR}}'
+    cmd: echo "No tests yet"
+
+  test:backend:
+    desc: Run backend tests
+    dir: '{{.BACKEND_DIR}}'
+    cmd: go test ./...
+
+  # ============ Utilities ============
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf {{.FRONTEND_DIR}}/dist
+      - rm -rf {{.BACKEND_DIR}}/bin
+      - rm -rf {{.BACKEND_DIR}}/tmp

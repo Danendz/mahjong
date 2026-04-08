@@ -20,14 +20,15 @@ function stopTimer() {
     clearInterval(interval)
     interval = null
   }
+  remaining.value = 0
 }
 
-watch(() => gameStore.timeLimit, (limit) => {
-  if (limit > 0 && gameStore.isMyTurn) startTimer(limit)
-})
-
-watch(() => gameStore.reactionTimeLimit, (limit) => {
-  if (limit > 0 && gameStore.isReacting) startTimer(limit)
+watch(() => gameStore.turnVersion, () => {
+  if (gameStore.isMyTurn && gameStore.timeLimit > 0) {
+    startTimer(gameStore.timeLimit)
+  } else if (gameStore.isReacting && gameStore.reactionTimeLimit > 0) {
+    startTimer(gameStore.reactionTimeLimit)
+  }
 })
 
 watch([() => gameStore.isMyTurn, () => gameStore.isReacting], ([myTurn, reacting]) => {

@@ -17,6 +17,7 @@ const tileCount = computed(() => gameStore.tileCounts[String(props.seat)] || 0)
 const melds = computed(() => gameStore.openMelds[String(props.seat)] || [])
 const isCurrentTurn = computed(() => gameStore.currentTurnSeat === props.seat)
 const isDisconnected = computed(() => gameStore.disconnectedSeats.has(props.seat))
+const isBot = computed(() => player.value?.is_bot === true)
 const positionLabel = computed(() => ['Right', 'Across', 'Left'][props.position])
 </script>
 
@@ -26,6 +27,7 @@ const positionLabel = computed(() => ['Right', 'Across', 'Left'][props.position]
       <span class="name">{{ player?.nickname || 'Player' }}</span>
       <span class="position">{{ positionLabel }}</span>
       <span class="tile-count">{{ tileCount }} tiles</span>
+      <span v-if="isBot" class="bot-badge">BOT</span>
       <span v-if="isDisconnected" class="dc-badge">DC</span>
     </div>
 
@@ -85,6 +87,15 @@ const positionLabel = computed(() => ['Right', 'Across', 'Left'][props.position]
 .tile-count {
   color: $color-text-muted;
   margin-left: auto;
+}
+
+.bot-badge {
+  background: #2dd4bf;
+  color: #1a1a2e;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
 .dc-badge {

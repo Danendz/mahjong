@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { PlayerInfo, RoomConfig } from '../types/generated'
+import type { PlayerInfo, RoomConfig, BotDifficulty } from '../types/generated'
 
 export const useRoomStore = defineStore('room', () => {
   const roomId = ref('')
@@ -52,6 +52,13 @@ export const useRoomStore = defineStore('room', () => {
     config.value = cfg
   }
 
+  function updateBotDifficulty(seat: number, difficulty: BotDifficulty) {
+    const player = players.value.find(p => p.seat === seat)
+    if (player) {
+      player.difficulty = difficulty
+    }
+  }
+
   function setPlaying() {
     status.value = 'playing'
   }
@@ -66,6 +73,6 @@ export const useRoomStore = defineStore('room', () => {
   return {
     roomId, code, players, config, status,
     playerCount, allReady,
-    setRoom, addPlayer, removePlayer, setPlayerReady, updateConfig, setPlaying, $reset,
+    setRoom, addPlayer, removePlayer, setPlayerReady, updateConfig, updateBotDifficulty, setPlaying, $reset,
   }
 })

@@ -1,20 +1,16 @@
-FROM golang:1.26-alpine
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
-# Install air for hot reload
-RUN go install github.com/air-verse/air@latest
-
-# Copy go mod files first for caching
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source
 COPY . .
-
-# Build
 RUN go build -o server ./cmd/server
 
-EXPOSE 8080
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/server .
 
+EXPOSE 8080
 CMD ["./server"]

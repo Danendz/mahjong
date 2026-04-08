@@ -2,7 +2,7 @@ import { useWebSocket } from './useWebSocket'
 import { useUserStore } from '../stores/user'
 import { useRoomStore } from '../stores/room'
 import { useGameStore } from '../stores/game'
-import type { ServerMessage, ClientMessage } from '../types/generated'
+import type { ServerMessage, ClientMessage, BotDifficulty } from '../types/generated'
 
 let initialized = false
 let joinResolve: (() => void) | null = null
@@ -70,6 +70,7 @@ export function useGameConnection() {
             msg.available_actions as any,
             msg.chi_options as any,
             msg.time_limit!,
+            msg.hu_score_preview,
           )
           break
 
@@ -97,6 +98,25 @@ export function useGameConnection() {
 
         case 'player_reconnected':
           gameStore.setReconnected(msg.seat!)
+          break
+
+        case 'bot_added':
+          roomStore.addPlayer({
+            seat: msg.seat,
+            nickname: msg.nickname,
+            ready: true,
+            connected: true,
+            is_bot: true,
+            difficulty: msg.difficulty,
+          })
+          break
+
+        case 'bot_removed':
+          roomStore.removePlayer(msg.seat)
+          break
+
+        case 'bot_difficulty_changed':
+          roomStore.updateBotDifficulty(msg.seat, msg.difficulty)
           break
 
         case 'error':
@@ -166,6 +186,18 @@ export function useGameConnection() {
     send({ type: 'pass' })
   }
 
+  function addBot(targetSeat: number, difficulty?: BotDifficulty) {
+    send({ type: 'add_bot', target_seat: targetSeat, difficulty })
+  }
+
+  function removeBot(targetSeat: number) {
+    send({ type: 'remove_bot', target_seat: targetSeat })
+  }
+
+  function setBotDifficulty(targetSeat: number, difficulty: BotDifficulty) {
+    send({ type: 'set_bot_difficulty', target_seat: targetSeat, difficulty })
+  }
+
   return {
     status: ws.status,
     init,
@@ -180,5 +212,8 @@ export function useGameConnection() {
     declareGang,
     declareHu,
     declarePass,
+    addBot,
+    removeBot,
+    setBotDifficulty,
   }
 }

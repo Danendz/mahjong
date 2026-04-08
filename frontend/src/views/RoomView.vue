@@ -4,15 +4,29 @@ import { useRouter } from 'vue-router'
 import { useRoomStore } from '../stores/room'
 import { useUserStore } from '../stores/user'
 import { useGameConnection } from '../composables/useGameConnection'
+import type { BotDifficulty } from '../types/generated'
 
 const props = defineProps<{ code: string }>()
 const router = useRouter()
 const roomStore = useRoomStore()
 const userStore = useUserStore()
-const { toggleReady, startGame, leaveRoom } = useGameConnection()
+const { toggleReady, startGame, leaveRoom, addBot, removeBot, setBotDifficulty } = useGameConnection()
 
 const isHost = computed(() => userStore.seat === 0)
 const canStart = computed(() => roomStore.allReady && roomStore.playerCount === 4)
+
+function handleAddBot(seat: number) {
+  addBot(seat)
+}
+
+function handleRemoveBot(seat: number) {
+  removeBot(seat)
+}
+
+function handleDifficultyChange(seat: number, event: Event) {
+  const difficulty = (event.target as HTMLSelectElement).value as BotDifficulty
+  setBotDifficulty(seat, difficulty)
+}
 
 const seatLabels = ['East', 'South', 'West', 'North']
 
@@ -62,10 +76,37 @@ function copyCode() {
             occupied: roomStore.players.find(p => p.seat === seatIdx - 1),
             ready: roomStore.players.find(p => p.seat === seatIdx - 1)?.ready,
             you: seatIdx - 1 === userStore.seat,
+            bot: roomStore.players.find(p => p.seat === seatIdx - 1)?.is_bot,
           }"
         >
           <div class="seat-label">{{ seatLabels[seatIdx - 1] }}</div>
-          <template v-if="roomStore.players.find(p => p.seat === seatIdx - 1)">
+
+          <!-- Bot player -->
+          <template v-if="roomStore.players.find(p => p.seat === seatIdx - 1)?.is_bot">
+            <div class="player-name">
+              {{ roomStore.players.find(p => p.seat === seatIdx - 1)!.nickname }}
+              <span class="bot-tag">BOT</span>
+            </div>
+            <div class="bot-controls">
+              <select
+                v-if="isHost"
+                class="difficulty-select"
+                :value="roomStore.players.find(p => p.seat === seatIdx - 1)?.difficulty"
+                @change="handleDifficultyChange(seatIdx - 1, $event)"
+              >
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+              <span v-else class="difficulty-label">
+                {{ roomStore.players.find(p => p.seat === seatIdx - 1)?.difficulty }}
+              </span>
+              <button v-if="isHost" class="btn-remove" @click="handleRemoveBot(seatIdx - 1)">Remove</button>
+            </div>
+          </template>
+
+          <!-- Human player -->
+          <template v-else-if="roomStore.players.find(p => p.seat === seatIdx - 1)">
             <div class="player-name">
               {{ roomStore.players.find(p => p.seat === seatIdx - 1)!.nickname }}
               <span v-if="seatIdx - 1 === userStore.seat" class="you-tag">(you)</span>
@@ -75,8 +116,17 @@ function copyCode() {
               {{ roomStore.players.find(p => p.seat === seatIdx - 1)?.ready ? 'Ready' : 'Not ready' }}
             </div>
           </template>
+
+          <!-- Empty seat -->
           <template v-else>
             <div class="empty">Waiting...</div>
+            <button
+              v-if="isHost && seatIdx - 1 !== 0"
+              class="btn-add-bot"
+              @click="handleAddBot(seatIdx - 1)"
+            >
+              + Add Bot
+            </button>
           </template>
         </div>
       </div>
@@ -241,6 +291,16 @@ function copyCode() {
   vertical-align: middle;
 }
 
+.bot-tag {
+  background: #2dd4bf;
+  color: $color-bg;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: $spacing-xs;
+  vertical-align: middle;
+}
+
 .ready-status {
   font-size: 0.85rem;
   color: $color-text-muted;
@@ -254,6 +314,70 @@ function copyCode() {
 .empty {
   color: $color-text-muted;
   font-style: italic;
+  flex: 1;
+}
+
+.bot-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-left: auto;
+}
+
+.difficulty-select {
+  background: $color-surface;
+  color: $color-text;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  padding: 2px $spacing-sm;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+  }
+}
+
+.difficulty-label {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  text-transform: capitalize;
+}
+
+.btn-remove {
+  background: transparent;
+  color: $color-danger;
+  border: 1px solid $color-danger;
+  border-radius: $border-radius-sm;
+  padding: 2px $spacing-sm;
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-danger;
+    color: $color-text;
+  }
+}
+
+.btn-add-bot {
+  background: transparent;
+  color: #2dd4bf;
+  border: 1px solid #2dd4bf;
+  border-radius: $border-radius-sm;
+  padding: 2px $spacing-md;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-left: auto;
+
+  &:hover {
+    background: #2dd4bf;
+    color: $color-bg;
+  }
+}
+
+.player-slot.bot {
+  border-color: #2dd4bf;
 }
 
 .config-summary {

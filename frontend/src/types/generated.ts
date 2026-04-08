@@ -18,6 +18,10 @@ export type TileCode = SuitedTileCode | HonorCode
 
 export type Valid258Pair = '2m' | '5m' | '8m' | '2s' | '5s' | '8s' | '2p' | '5p' | '8p'
 
+// ============ Bot Types ============
+
+export type BotDifficulty = 'easy' | 'medium' | 'hard'
+
 // ============ Room Types ============
 
 export type OpenCallMode = 'koukou' | 'kaikou'
@@ -35,6 +39,8 @@ export interface PlayerInfo {
   nickname: string
   ready: boolean
   connected: boolean
+  is_bot?: boolean
+  difficulty?: BotDifficulty
 }
 
 export interface MeldInfo {
@@ -68,6 +74,9 @@ export type ClientMessage =
   | { type: 'gang'; gang_type: 'open' | 'closed' | 'add'; tile: TileCode }
   | { type: 'hu' }
   | { type: 'pass' }
+  | { type: 'add_bot'; target_seat: number; difficulty?: BotDifficulty }
+  | { type: 'remove_bot'; target_seat: number }
+  | { type: 'set_bot_difficulty'; target_seat: number; difficulty: BotDifficulty }
 
 // ============ Server → Client Messages ============
 
@@ -87,6 +96,9 @@ export type ServerMessage =
   | GameStateMsg
   | PlayerDisconnectedMsg
   | PlayerReconnectedMsg
+  | BotAddedMsg
+  | BotRemovedMsg
+  | BotDiffChangedMsg
   | ErrorMsg
 
 export interface RoomJoinedMsg {
@@ -135,6 +147,8 @@ export interface YourTurnMsg {
   wall_remaining: number
   can_gang: TileCode[]
   can_hu: boolean
+  hu_score_preview?: number
+  waiting_tiles?: TileCode[]
 }
 
 export interface TileDiscardedMsg {
@@ -153,6 +167,7 @@ export interface ReactionPromptMsg {
   available_actions: ReactionAction[]
   chi_options?: [TileCode, TileCode][]
   time_limit: number
+  hu_score_preview?: number
 }
 
 export interface ActionResolvedMsg {
@@ -207,6 +222,26 @@ export interface PlayerDisconnectedMsg {
 export interface PlayerReconnectedMsg {
   type: 'player_reconnected'
   seat: number
+}
+
+export interface BotAddedMsg {
+  type: 'bot_added'
+  seat: number
+  nickname: string
+  is_bot: true
+  difficulty: BotDifficulty
+  ready: true
+}
+
+export interface BotRemovedMsg {
+  type: 'bot_removed'
+  seat: number
+}
+
+export interface BotDiffChangedMsg {
+  type: 'bot_difficulty_changed'
+  seat: number
+  difficulty: BotDifficulty
 }
 
 export interface ErrorMsg {

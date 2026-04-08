@@ -226,6 +226,54 @@ func createMessageRouter(roomMgr *room.Manager, database *db.DB) ws.MessageHandl
 			err = roomMgr.HandleReaction(client.RoomCode, client.Seat, engine.PlayerReaction{
 				Type: engine.ReactionPass,
 			})
+
+		case models.MsgAddBot:
+			if msg.TargetSeat == nil {
+				err = fmt.Errorf("target_seat required")
+			} else {
+				var botPlayer *room.Player
+				botPlayer, err = roomMgr.AddBot(client.RoomCode, client.UserID, *msg.TargetSeat, msg.Difficulty)
+				if err == nil {
+					seatVal := botPlayer.Seat
+					isBot := true
+					client.Hub.BroadcastToRoom(client.RoomCode, models.ServerMessage{
+						Type:       models.MsgBotAdded,
+						Seat:       &seatVal,
+						Nickname:   botPlayer.Nickname,
+						IsBot:      &isBot,
+						Difficulty: botPlayer.Difficulty,
+					})
+				}
+			}
+
+		case models.MsgRemoveBot:
+			if msg.TargetSeat == nil {
+				err = fmt.Errorf("target_seat required")
+			} else {
+				err = roomMgr.RemoveBot(client.RoomCode, client.UserID, *msg.TargetSeat)
+				if err == nil {
+					seatVal := *msg.TargetSeat
+					client.Hub.BroadcastToRoom(client.RoomCode, models.ServerMessage{
+						Type: models.MsgBotRemoved,
+						Seat: &seatVal,
+					})
+				}
+			}
+
+		case models.MsgSetBotDifficulty:
+			if msg.TargetSeat == nil {
+				err = fmt.Errorf("target_seat required")
+			} else {
+				err = roomMgr.SetBotDifficulty(client.RoomCode, client.UserID, *msg.TargetSeat, msg.Difficulty)
+				if err == nil {
+					seatVal := *msg.TargetSeat
+					client.Hub.BroadcastToRoom(client.RoomCode, models.ServerMessage{
+						Type:       models.MsgBotDiffChanged,
+						Seat:       &seatVal,
+						Difficulty: msg.Difficulty,
+					})
+				}
+			}
 		}
 
 		if err != nil {
@@ -243,7 +291,7 @@ func handleJoinRoom(client *ws.Client, roomMgr *room.Manager, msg models.ClientM
 	client.Nickname = msg.Nickname
 	client.UserID = msg.SessionToken // guest mode
 
-	rm, seat, err := roomMgr.JoinRoom(msg.Code, client.UserID, msg.SessionToken, msg.Nickname)
+	rm, seat, replacedBotSeat, err := roomMgr.JoinRoom(msg.Code, client.UserID, msg.SessionToken, msg.Nickname)
 	if err != nil {
 		return err
 	}
@@ -266,7 +314,14 @@ func handleJoinRoom(client *ws.Client, roomMgr *room.Manager, msg models.ClientM
 			log.Printf("reconnect error: %v", err)
 		}
 	} else {
-		// Notify others
+		// If a bot was replaced, notify others about the removal first
+		if replacedBotSeat >= 0 {
+			client.Hub.BroadcastToRoom(msg.Code, models.ServerMessage{
+				Type: models.MsgBotRemoved,
+				Seat: &replacedBotSeat,
+			})
+		}
+		// Notify others about the new player
 		client.Hub.BroadcastToRoom(msg.Code, models.ServerMessage{
 			Type:     models.MsgPlayerJoined,
 			Seat:     &seatVal,
@@ -309,8 +364,12 @@ func handleStartGame(client *ws.Client, roomMgr *room.Manager) error {
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
+	origin := os.Getenv("CORS_ORIGIN")
+	if origin == "" {
+		origin = "*"
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 

@@ -28,6 +28,8 @@ export const useGameStore = defineStore('game', () => {
   const canGang = ref<TileCode[]>([])
   const canHu = ref(false)
   const timeLimit = ref(0)
+  const huScorePreview = ref<number | null>(null)
+  const waitingTiles = ref<TileCode[]>([])
 
   // Reaction state
   const reactionTile = ref<TileCode | null>(null)
@@ -40,6 +42,9 @@ export const useGameStore = defineStore('game', () => {
   const roundResult = ref<RoundEndMsg | null>(null)
   const isRoundEnd = ref(false)
 
+  // Timer trigger — incremented each turn/reaction so watchers always fire
+  const turnVersion = ref(0)
+
   // Connection status per player
   const disconnectedSeats = ref<Set<number>>(new Set())
 
@@ -47,7 +52,7 @@ export const useGameStore = defineStore('game', () => {
   const isReacting = computed(() => availableActions.value.length > 0)
 
   function handleGameStarted(msg: GameStartedMsg) {
-    hand.value = msg.your_hand
+    hand.value = msg.your_hand || []
     laiziIndicator.value = msg.laizi_indicator
     laiziTile.value = msg.laizi_tile
     dealerSeat.value = msg.dealer_seat
@@ -57,20 +62,35 @@ export const useGameStore = defineStore('game', () => {
     roundResult.value = null
     availableActions.value = []
 
-    // Reset discards and melds for new round
+    // Reset discards, melds, and tile counts for new round
     openMelds.value = { '0': [], '1': [], '2': [], '3': [] }
     discards.value = { '0': [], '1': [], '2': [], '3': [] }
+    tileCounts.value = {}
+    for (let i = 0; i < 4; i++) {
+      tileCounts.value[String(i)] = i === msg.dealer_seat ? 14 : 13
+    }
+    canGang.value = []
+    canHu.value = false
+    turnVersion.value = 0
   }
 
   function handleYourTurn(msg: YourTurnMsg) {
-    drawnTile.value = msg.drawn_tile
-    hand.value.push(msg.drawn_tile)
-    canGang.value = msg.can_gang
-    canHu.value = msg.can_hu
+    drawnTile.value = msg.drawn_tile ?? null
+    if (msg.drawn_tile) {
+      hand.value.push(msg.drawn_tile)
+      // Increment own tile count for the draw
+      const key = String(yourSeat.value)
+      tileCounts.value[key] = (tileCounts.value[key] || 13) + 1
+    }
+    canGang.value = msg.can_gang || []
+    canHu.value = msg.can_hu ?? false
+    huScorePreview.value = msg.hu_score_preview ?? null
+    waitingTiles.value = msg.waiting_tiles || []
     timeLimit.value = msg.time_limit
     wallRemaining.value = msg.wall_remaining
     currentTurnSeat.value = yourSeat.value
     availableActions.value = []
+    turnVersion.value++
   }
 
   function handleTileDiscarded(seat: number, tile: TileCode, remaining: number) {
@@ -93,12 +113,15 @@ export const useGameStore = defineStore('game', () => {
     actions: ReactionAction[],
     options: [TileCode, TileCode][] | undefined,
     limit: number,
+    scorePreview?: number,
   ) {
     reactionTile.value = tile
     reactionFromSeat.value = fromSeat
     availableActions.value = actions
     chiOptions.value = options || []
     reactionTimeLimit.value = limit
+    huScorePreview.value = scorePreview ?? null
+    turnVersion.value++
   }
 
   function handleActionResolved(seat: number, action: string, tilesRevealed: TileCode[], nextTurnSeat: number) {
@@ -175,13 +198,14 @@ export const useGameStore = defineStore('game', () => {
     roundResult.value = null
     isRoundEnd.value = false
     disconnectedSeats.value.clear()
+    turnVersion.value = 0
   }
 
   return {
     hand, drawnTile, laiziIndicator, laiziTile, dealerSeat,
-    currentTurnSeat, wallRemaining, yourSeat,
+    currentTurnSeat, wallRemaining, yourSeat, turnVersion,
     openMelds, discards, tileCounts, scores,
-    canGang, canHu, timeLimit,
+    canGang, canHu, timeLimit, huScorePreview, waitingTiles,
     reactionTile, reactionFromSeat, availableActions, chiOptions, reactionTimeLimit,
     roundResult, isRoundEnd, disconnectedSeats,
     isMyTurn, isReacting,

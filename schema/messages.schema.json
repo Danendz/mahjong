@@ -233,7 +233,9 @@
         "time_limit": { "type": "integer" },
         "wall_remaining": { "type": "integer" },
         "can_gang": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } },
-        "can_hu": { "type": "boolean" }
+        "can_hu": { "type": "boolean" },
+        "hu_score_preview": { "type": "integer", "description": "Preview of score per loser if player declares hu (self-draw)" },
+        "waiting_tiles": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" }, "description": "Tiles that would complete the hand (tenpai indicator)" }
       },
       "required": ["type", "drawn_tile", "time_limit", "wall_remaining", "can_gang", "can_hu"]
     },
@@ -255,7 +257,8 @@
         "from_seat": { "type": "integer" },
         "available_actions": { "type": "array", "items": { "type": "string", "enum": ["chi", "pong", "gang", "hu", "pass"] } },
         "chi_options": { "type": "array", "items": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" }, "minItems": 2, "maxItems": 2 } },
-        "time_limit": { "type": "integer" }
+        "time_limit": { "type": "integer" },
+        "hu_score_preview": { "type": "integer", "description": "Preview of score per loser if player declares hu (discard win)" }
       },
       "required": ["type", "tile", "from_seat", "available_actions", "time_limit"]
     },

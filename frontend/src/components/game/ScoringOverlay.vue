@@ -1,14 +1,49 @@
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/game'
-import { useRoomStore } from '../../stores/room'
+import { usePlayerName } from '../../composables/usePlayerName'
 import MahjongTile from './MahjongTile.vue'
 
 const gameStore = useGameStore()
-const roomStore = useRoomStore()
+const { playerName } = usePlayerName()
 
-function playerName(seat: number): string {
-  return roomStore.players.find(p => p.seat === seat)?.nickname || `Player ${seat}`
-}
+// Next round countdown
+const countdown = ref(30)
+let countdownInterval: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  countdownInterval = setInterval(() => {
+    if (countdown.value > 0) {
+      countdown.value--
+    } else if (countdownInterval) {
+      clearInterval(countdownInterval)
+      countdownInterval = null
+    }
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+    countdownInterval = null
+  }
+})
+
+// Player rankings sorted by score descending
+const rankColors = ['#f0a500', '#999', '#cd7f32', '#666']
+
+const rankedScores = computed(() => {
+  const scores = gameStore.roundResult?.total_scores
+  if (!scores) return []
+  return Object.entries(scores)
+    .map(([seat, score]) => ({ seat: Number(seat), score: score as number }))
+    .sort((a, b) => b.score - a.score)
+    .map((entry, idx) => ({
+      ...entry,
+      rank: idx + 1,
+      color: rankColors[idx] ?? '#666',
+    }))
+})
 </script>
 
 <template>
@@ -58,9 +93,19 @@ function playerName(seat: number): string {
       </div>
 
       <div class="total-scores">
-        <div v-for="(score, seat) in gameStore.roundResult.total_scores" :key="seat">
-          {{ playerName(Number(seat)) }}: {{ score }}
+        <div v-for="entry in rankedScores" :key="entry.seat" class="ranked-player">
+          <span class="rank-badge" :style="{ backgroundColor: entry.color }">
+            {{ entry.rank }}
+          </span>
+          {{ playerName(entry.seat) }}: {{ entry.score }}
         </div>
+      </div>
+
+      <div v-if="countdown > 0" class="countdown">
+        Next round in {{ countdown }}s...
+      </div>
+      <div v-else class="countdown">
+        Starting...
       </div>
     </div>
   </div>
@@ -136,7 +181,33 @@ function playerName(seat: number): string {
   font-size: 0.85rem;
   color: $color-text-muted;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.ranked-player {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap: $spacing-md;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.countdown {
+  margin-top: $spacing-lg;
+  font-size: 0.85rem;
+  color: $color-text-muted;
 }
 </style>

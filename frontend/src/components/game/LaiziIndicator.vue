@@ -10,9 +10,15 @@ const gameStore = useGameStore()
     <div class="label">Laizi</div>
     <div class="tiles">
       <div class="indicator">
-        <MahjongTile :code="gameStore.laiziIndicator" small />
+        <div class="tile-with-label">
+          <MahjongTile :code="gameStore.laiziIndicator" small />
+          <span class="sub-label">翻</span>
+        </div>
         <span class="arrow">&rarr;</span>
-        <MahjongTile :code="gameStore.laiziTile!" is-laizi small />
+        <div class="tile-with-label">
+          <MahjongTile :code="gameStore.laiziTile!" is-laizi small />
+          <span class="sub-label wild">癞子</span>
+        </div>
       </div>
     </div>
   </div>
@@ -45,5 +51,22 @@ const gameStore = useGameStore()
 .arrow {
   color: $color-text-muted;
   font-size: 1.2rem;
+}
+
+.tile-with-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.sub-label {
+  font-size: 0.6rem;
+  color: $color-text-muted;
+
+  &.wild {
+    color: $color-tile-laizi;
+    font-weight: 600;
+  }
 }
 </style>

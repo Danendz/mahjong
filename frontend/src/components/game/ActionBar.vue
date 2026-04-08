@@ -21,7 +21,7 @@ const hasHu = computed(() => gameStore.availableActions.includes('hu') || gameSt
 const hasPong = computed(() => gameStore.availableActions.includes('pong'))
 const hasChi = computed(() => gameStore.availableActions.includes('chi'))
 const hasGang = computed(() =>
-  gameStore.availableActions.includes('gang') || gameStore.canGang.length > 0
+  gameStore.availableActions.includes('gang') || (gameStore.canGang?.length ?? 0) > 0
 )
 
 function handleChi(option: [string, string]) {
@@ -32,7 +32,7 @@ function handleChi(option: [string, string]) {
 function handleGang() {
   if (showReactions.value) {
     emit('gang', { type: 'open', tile: gameStore.reactionTile! })
-  } else if (gameStore.canGang.length === 1) {
+  } else if (gameStore.canGang?.length === 1) {
     // Auto-select the only option
     const tile = gameStore.canGang[0]
     // Determine type: check if it's closed or add
@@ -46,19 +46,24 @@ function handleGang() {
     <!-- Reaction buttons -->
     <template v-if="showReactions">
       <button v-if="hasHu" class="btn-action hu" @click="$emit('hu')">
-        胡
+        <span class="action-cn">胡</span>
+        <span class="action-en">Win{{ gameStore.huScorePreview ? ` (${gameStore.huScorePreview}pts)` : '' }}</span>
       </button>
       <button v-if="hasGang" class="btn-action gang" @click="handleGang">
-        杠
+        <span class="action-cn">杠</span>
+        <span class="action-en">Kong</span>
       </button>
       <button v-if="hasPong" class="btn-action pong" @click="$emit('pong')">
-        碰
+        <span class="action-cn">碰</span>
+        <span class="action-en">Pong</span>
       </button>
       <button v-if="hasChi && !showChiOptions" class="btn-action chi" @click="showChiOptions = gameStore.chiOptions.length > 1 ? true : false; if (gameStore.chiOptions.length === 1) handleChi(gameStore.chiOptions[0] as [string, string])">
-        吃
+        <span class="action-cn">吃</span>
+        <span class="action-en">Chi</span>
       </button>
       <button class="btn-action pass" @click="$emit('pass')">
-        过
+        <span class="action-cn">过</span>
+        <span class="action-en">Pass</span>
       </button>
     </template>
 
@@ -80,10 +85,12 @@ function handleGang() {
     <!-- Turn actions (kong, hu on self-draw) -->
     <template v-if="showTurnActions && !showReactions">
       <button v-if="gameStore.canHu" class="btn-action hu" @click="$emit('hu')">
-        自摸
+        <span class="action-cn">自摸</span>
+        <span class="action-en">Zimo{{ gameStore.huScorePreview ? ` (${gameStore.huScorePreview}pts)` : '' }}</span>
       </button>
-      <button v-if="gameStore.canGang.length > 0" class="btn-action gang" @click="handleGang">
-        杠
+      <button v-if="(gameStore.canGang?.length ?? 0) > 0" class="btn-action gang" @click="handleGang">
+        <span class="action-cn">杠</span>
+        <span class="action-en">Kong</span>
       </button>
     </template>
   </div>
@@ -100,6 +107,9 @@ function handleGang() {
 }
 
 .btn-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: $spacing-sm $spacing-lg;
   border-radius: $border-radius;
   font-size: 1.2rem;
@@ -109,6 +119,18 @@ function handleGang() {
   transition: transform 0.1s;
 
   &:active { transform: scale(0.95); }
+}
+
+.action-cn {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.action-en {
+  font-size: 0.6rem;
+  opacity: 0.8;
+  line-height: 1;
+  margin-top: 2px;
 }
 
 .hu {

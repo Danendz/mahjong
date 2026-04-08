@@ -33,6 +33,10 @@ export type TileCode = SuitedTileCode | HonorCode
 
 export type Valid258Pair = '2m' | '5m' | '8m' | '2s' | '5s' | '8s' | '2p' | '5p' | '8p'
 
+// ============ Bot Types ============
+
+export type BotDifficulty = 'easy' | 'medium' | 'hard'
+
 // ============ Room Types ============
 
 export type OpenCallMode = 'koukou' | 'kaikou'
@@ -50,6 +54,8 @@ export interface PlayerInfo {
   nickname: string
   ready: boolean
   connected: boolean
+  is_bot?: boolean
+  difficulty?: BotDifficulty
 }
 
 export interface MeldInfo {
@@ -83,6 +89,9 @@ export type ClientMessage =
   | { type: 'gang'; gang_type: 'open' | 'closed' | 'add'; tile: TileCode }
   | { type: 'hu' }
   | { type: 'pass' }
+  | { type: 'add_bot'; target_seat: number; difficulty?: BotDifficulty }
+  | { type: 'remove_bot'; target_seat: number }
+  | { type: 'set_bot_difficulty'; target_seat: number; difficulty: BotDifficulty }
 
 // ============ Server → Client Messages ============
 
@@ -102,6 +111,9 @@ export type ServerMessage =
   | GameStateMsg
   | PlayerDisconnectedMsg
   | PlayerReconnectedMsg
+  | BotAddedMsg
+  | BotRemovedMsg
+  | BotDiffChangedMsg
   | ErrorMsg
 
 export interface RoomJoinedMsg {
@@ -150,6 +162,8 @@ export interface YourTurnMsg {
   wall_remaining: number
   can_gang: TileCode[]
   can_hu: boolean
+  hu_score_preview?: number
+  waiting_tiles?: TileCode[]
 }
 
 export interface TileDiscardedMsg {
@@ -168,6 +182,7 @@ export interface ReactionPromptMsg {
   available_actions: ReactionAction[]
   chi_options?: [TileCode, TileCode][]
   time_limit: number
+  hu_score_preview?: number
 }
 
 export interface ActionResolvedMsg {
@@ -222,6 +237,26 @@ export interface PlayerDisconnectedMsg {
 export interface PlayerReconnectedMsg {
   type: 'player_reconnected'
   seat: number
+}
+
+export interface BotAddedMsg {
+  type: 'bot_added'
+  seat: number
+  nickname: string
+  is_bot: true
+  difficulty: BotDifficulty
+  ready: true
+}
+
+export interface BotRemovedMsg {
+  type: 'bot_removed'
+  seat: number
+}
+
+export interface BotDiffChangedMsg {
+  type: 'bot_difficulty_changed'
+  seat: number
+  difficulty: BotDifficulty
 }
 
 export interface ErrorMsg {
@@ -315,6 +350,16 @@ var LaiziSequence = map[TileCode]TileCode{
 	TileDZ: TileDF, TileDF: TileDB, TileDB: TileWE,
 }
 
+// ============ Bot Types ============
+
+type BotDifficulty string
+
+const (
+	BotDifficultyEasy   BotDifficulty = "easy"
+	BotDifficultyMedium BotDifficulty = "medium"
+	BotDifficultyHard   BotDifficulty = "hard"
+)
+
 // ============ Room Types ============
 
 type OpenCallMode string
@@ -333,10 +378,12 @@ type RoomConfig struct {
 }
 
 type PlayerInfo struct {
-	Seat      int    `json:"seat"`
-	Nickname  string `json:"nickname"`
-	Ready     bool   `json:"ready"`
-	Connected bool   `json:"connected"`
+	Seat       int           `json:"seat"`
+	Nickname   string        `json:"nickname"`
+	Ready      bool          `json:"ready"`
+	Connected  bool          `json:"connected"`
+	IsBot      bool          `json:"is_bot,omitempty"`
+	Difficulty BotDifficulty `json:"difficulty,omitempty"`
 }
 
 type MeldType string
@@ -380,8 +427,11 @@ const (
 	MsgChi           ClientMessageType = "chi"
 	MsgPong          ClientMessageType = "pong"
 	MsgGang          ClientMessageType = "gang"
-	MsgHu            ClientMessageType = "hu"
-	MsgPass          ClientMessageType = "pass"
+	MsgHu               ClientMessageType = "hu"
+	MsgPass             ClientMessageType = "pass"
+	MsgAddBot           ClientMessageType = "add_bot"
+	MsgRemoveBot        ClientMessageType = "remove_bot"
+	MsgSetBotDifficulty ClientMessageType = "set_bot_difficulty"
 )
 
 type ClientMessage struct {
@@ -393,6 +443,8 @@ type ClientMessage struct {
 	Tile         TileCode          `json:"tile,omitempty"`
 	Tiles        []TileCode        `json:"tiles,omitempty"`
 	GangType     string            `json:"gang_type,omitempty"`
+	TargetSeat   *int              `json:"target_seat,omitempty"`
+	Difficulty   BotDifficulty     `json:"difficulty,omitempty"`
 }
 
 // ============ Server → Client Messages ============
@@ -415,6 +467,9 @@ const (
 	MsgGameState          ServerMessageType = "game_state"
 	MsgPlayerDisconnected ServerMessageType = "player_disconnected"
 	MsgPlayerReconnected  ServerMessageType = "player_reconnected"
+	MsgBotAdded           ServerMessageType = "bot_added"
+	MsgBotRemoved         ServerMessageType = "bot_removed"
+	MsgBotDiffChanged     ServerMessageType = "bot_difficulty_changed"
 	MsgError              ServerMessageType = "error"
 )
 
@@ -428,9 +483,13 @@ type ServerMessage struct {
 	Players  []PlayerInfo `json:"players,omitempty"`
 	Config   *RoomConfig  `json:"config,omitempty"`
 
-	// player_joined / player_left / player_ready
+	// player_joined / player_left / player_ready / bot_added / bot_removed
 	Seat     *int   `json:"seat,omitempty"`
 	Nickname string `json:"nickname,omitempty"`
+
+	// bot_added / bot_difficulty_changed
+	IsBot      *bool         `json:"is_bot,omitempty"`
+	Difficulty BotDifficulty `json:"difficulty,omitempty"`
 
 	// game_started
 	YourHand       []TileCode `json:"your_hand,omitempty"`
@@ -440,10 +499,12 @@ type ServerMessage struct {
 	WallRemaining  *int       `json:"wall_remaining,omitempty"`
 
 	// your_turn
-	DrawnTile TileCode   `json:"drawn_tile,omitempty"`
-	TimeLimit *int       `json:"time_limit,omitempty"`
-	CanGang   []TileCode `json:"can_gang,omitempty"`
-	CanHu     *bool      `json:"can_hu,omitempty"`
+	DrawnTile      TileCode   `json:"drawn_tile,omitempty"`
+	TimeLimit      *int       `json:"time_limit,omitempty"`
+	CanGang        []TileCode `json:"can_gang,omitempty"`
+	CanHu          *bool      `json:"can_hu,omitempty"`
+	HuScorePreview *int       `json:"hu_score_preview,omitempty"`
+	WaitingTiles   []TileCode `json:"waiting_tiles,omitempty"`
 
 	// tile_discarded / reaction_prompt
 	Tile     TileCode `json:"tile,omitempty"`

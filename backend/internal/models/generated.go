@@ -96,11 +96,13 @@ const (
 )
 
 type RoomConfig struct {
-	ScoreCap      int          `json:"score_cap"`
-	OpenCallMode  OpenCallMode `json:"open_call_mode"`
-	TurnTimer     int          `json:"turn_timer"`
-	ReactionTimer int          `json:"reaction_timer"`
-	NumRounds     int          `json:"num_rounds"`
+	ScoreCap           int          `json:"score_cap"`
+	OpenCallMode       OpenCallMode `json:"open_call_mode"`
+	TurnTimer          int          `json:"turn_timer"`
+	ReactionTimer      int          `json:"reaction_timer"`
+	NumRounds          int          `json:"num_rounds"`
+	ZimoOnly           bool         `json:"zimo_only"`
+	DealerContinuation bool         `json:"dealer_continuation"`
 }
 
 type PlayerInfo struct {

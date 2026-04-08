@@ -2,7 +2,7 @@
 -- Initial schema for Wuhan Mahjong
 
 -- Guest users (every player gets a row, even guests)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nickname VARCHAR(32) NOT NULL,
     session_token VARCHAR(128) UNIQUE NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE users (
 );
 
 -- Game rooms
-CREATE TABLE rooms (
+CREATE TABLE IF NOT EXISTS rooms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(8) UNIQUE NOT NULL,
     host_user_id UUID REFERENCES users(id),
@@ -21,7 +21,7 @@ CREATE TABLE rooms (
 );
 
 -- Players in a room (seat assignment)
-CREATE TABLE room_players (
+CREATE TABLE IF NOT EXISTS room_players (
     room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     seat INTEGER NOT NULL CHECK (seat BETWEEN 0 AND 3),
@@ -31,7 +31,7 @@ CREATE TABLE room_players (
 );
 
 -- Event sourcing: every game action
-CREATE TABLE game_events (
+CREATE TABLE IF NOT EXISTS game_events (
     id BIGSERIAL PRIMARY KEY,
     room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     seq INTEGER NOT NULL,
@@ -42,10 +42,10 @@ CREATE TABLE game_events (
     UNIQUE (room_id, seq)
 );
 
-CREATE INDEX idx_game_events_room_seq ON game_events (room_id, seq);
+CREATE INDEX IF NOT EXISTS idx_game_events_room_seq ON game_events (room_id, seq);
 
 -- Periodic snapshots for fast reconnection
-CREATE TABLE game_snapshots (
+CREATE TABLE IF NOT EXISTS game_snapshots (
     id BIGSERIAL PRIMARY KEY,
     room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     seq INTEGER NOT NULL,
@@ -53,10 +53,10 @@ CREATE TABLE game_snapshots (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_game_snapshots_room ON game_snapshots (room_id, seq DESC);
+CREATE INDEX IF NOT EXISTS idx_game_snapshots_room ON game_snapshots (room_id, seq DESC);
 
 -- Game results (per round)
-CREATE TABLE game_results (
+CREATE TABLE IF NOT EXISTS game_results (
     id BIGSERIAL PRIMARY KEY,
     room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     round INTEGER NOT NULL,
@@ -66,4 +66,4 @@ CREATE TABLE game_results (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_game_results_room ON game_results (room_id, round);
+CREATE INDEX IF NOT EXISTS idx_game_results_room ON game_results (room_id, round);

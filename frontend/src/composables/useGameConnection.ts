@@ -2,7 +2,7 @@ import { useWebSocket } from './useWebSocket'
 import { useUserStore } from '../stores/user'
 import { useRoomStore } from '../stores/room'
 import { useGameStore } from '../stores/game'
-import type { ServerMessage, ClientMessage, BotDifficulty } from '../types/generated'
+import type { ServerMessage, ClientMessage, BotDifficulty, RoomConfig } from '../types/generated'
 
 let initialized = false
 let joinResolve: (() => void) | null = null
@@ -16,6 +16,20 @@ export function useGameConnection() {
   function init() {
     if (initialized) return
     initialized = true
+
+    ws.onReconnect(() => {
+      const code = roomStore.code
+      const token = userStore.sessionToken
+      const nickname = userStore.nickname
+      if (code && token) {
+        send({
+          type: 'join_room',
+          code,
+          nickname,
+          session_token: token,
+        })
+      }
+    })
 
     ws.onMessage((msg: ServerMessage) => {
       switch (msg.type) {
@@ -47,7 +61,7 @@ export function useGameConnection() {
           break
 
         case 'config_updated':
-          roomStore.updateConfig(msg.config!)
+          roomStore.updateConfig(msg.config!, (msg as any).players)
           break
 
         case 'game_started':
@@ -89,6 +103,7 @@ export function useGameConnection() {
           break
 
         case 'game_state':
+          roomStore.setPlaying()
           gameStore.handleGameState(msg as any)
           break
 
@@ -198,6 +213,10 @@ export function useGameConnection() {
     send({ type: 'set_bot_difficulty', target_seat: targetSeat, difficulty })
   }
 
+  function configureRoom(config: RoomConfig) {
+    send({ type: 'configure_room', config })
+  }
+
   return {
     status: ws.status,
     init,
@@ -215,5 +234,6 @@ export function useGameConnection() {
     addBot,
     removeBot,
     setBotDifficulty,
+    configureRoom,
   }
 }

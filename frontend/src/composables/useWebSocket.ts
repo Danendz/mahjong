@@ -21,6 +21,7 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let messageHandler: ((msg: ServerMessage) => void) | null = null
 
 const MAX_RECONNECT_DELAY = 30_000
+let reconnectHandler: (() => void) | null = null
 
 function getReconnectDelay(): number {
   // Exponential backoff: 0, 1s, 2s, 4s, 8s, ... capped at 30s
@@ -37,8 +38,12 @@ export function useWebSocket() {
     socket = new WebSocket(getWsUrl())
 
     socket.onopen = () => {
+      const wasReconnect = reconnectAttempts > 0
       status.value = 'connected'
       reconnectAttempts = 0
+      if (wasReconnect && reconnectHandler) {
+        reconnectHandler()
+      }
     }
 
     socket.onmessage = (event) => {
@@ -86,6 +91,10 @@ export function useWebSocket() {
     messageHandler = handler
   }
 
+  function onReconnect(handler: () => void) {
+    reconnectHandler = handler
+  }
+
   function scheduleReconnect() {
     reconnectAttempts++
     const delay = getReconnectDelay()
@@ -100,5 +109,6 @@ export function useWebSocket() {
     disconnect,
     send,
     onMessage,
+    onReconnect,
   }
 }

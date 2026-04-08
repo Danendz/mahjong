@@ -11,9 +11,11 @@
         "open_call_mode": { "type": "string", "enum": ["koukou", "kaikou"], "description": "koukou=口口翻 (each call doubles), kaikou=开口翻 (any call doubles once)" },
         "turn_timer": { "type": "integer", "enum": [10, 15, 20, 30], "description": "Seconds per turn" },
         "reaction_timer": { "type": "integer", "enum": [5, 8, 10, 15], "description": "Seconds per reaction" },
-        "num_rounds": { "type": "integer", "enum": [4, 8, 16] }
+        "num_rounds": { "type": "integer", "enum": [4, 8, 16] },
+        "zimo_only": { "type": "boolean", "description": "Only self-draw wins allowed (只准自摸)" },
+        "dealer_continuation": { "type": "boolean", "description": "Dealer stays on win or draw (连庄)" }
       },
-      "required": ["score_cap", "open_call_mode", "turn_timer", "reaction_timer", "num_rounds"]
+      "required": ["score_cap", "open_call_mode", "turn_timer", "reaction_timer", "num_rounds", "zimo_only", "dealer_continuation"]
     },
     "PlayerInfo": {
       "type": "object",

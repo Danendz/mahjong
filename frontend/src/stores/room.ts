@@ -12,6 +12,8 @@ export const useRoomStore = defineStore('room', () => {
     turn_timer: 15,
     reaction_timer: 8,
     num_rounds: 8,
+    zimo_only: false,
+    dealer_continuation: false,
   })
   const status = ref<'lobby' | 'waiting' | 'playing' | 'finished'>('lobby')
 
@@ -48,8 +50,11 @@ export const useRoomStore = defineStore('room', () => {
     }
   }
 
-  function updateConfig(cfg: RoomConfig) {
+  function updateConfig(cfg: RoomConfig, playerList?: PlayerInfo[]) {
     config.value = cfg
+    if (playerList) {
+      players.value = playerList
+    }
   }
 
   function updateBotDifficulty(seat: number, difficulty: BotDifficulty) {

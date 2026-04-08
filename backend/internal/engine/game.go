@@ -253,6 +253,10 @@ func (g *Game) DeclareReaction(seat int, reaction PlayerReaction) error {
 		return errors.New("reaction not expected from this seat")
 	}
 
+	if g.Config.ZimoOnly && reaction.Type == ReactionHu && g.Phase == PhaseAwaitingReaction {
+		return errors.New("discard wins are disabled (zimo only mode)")
+	}
+
 	g.Reactions[seat] = &reaction
 	delete(g.ReactionsNeeded, seat)
 
@@ -494,7 +498,7 @@ func (g *Game) GetAvailableActions(seat int) []string {
 			discard := *g.LastDiscard
 			player := g.Players[seat]
 
-			if CanWinWithTile(player.Hand, discard, g.LaiziTile).IsWin {
+			if !g.Config.ZimoOnly && CanWinWithTile(player.Hand, discard, g.LaiziTile).IsWin {
 				actions = append(actions, "hu")
 			}
 			if CanOpenGang(player.Hand, discard) {
@@ -529,7 +533,7 @@ func (g *Game) checkForReactions(tile models.TileCode, discardSeat int) bool {
 		player := g.Players[seat]
 
 		canReact := false
-		if CanWinWithTile(player.Hand, tile, g.LaiziTile).IsWin {
+		if !g.Config.ZimoOnly && CanWinWithTile(player.Hand, tile, g.LaiziTile).IsWin {
 			canReact = true
 		}
 		if CanOpenGang(player.Hand, tile) {

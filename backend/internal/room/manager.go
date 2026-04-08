@@ -86,11 +86,13 @@ func (m *Manager) CreateRoom(hostUserID, hostToken, nickname string) (*Room, err
 		Status:        StatusWaiting,
 		BotController: bot.NewController(),
 		Config: models.RoomConfig{
-			ScoreCap:      500,
-			OpenCallMode:  models.OpenCallModeKouKou,
-			TurnTimer:     15,
-			ReactionTimer: 8,
-			NumRounds:     8,
+			ScoreCap:           500,
+			OpenCallMode:       models.OpenCallModeKouKou,
+			TurnTimer:          15,
+			ReactionTimer:      8,
+			NumRounds:          8,
+			ZimoOnly:           false,
+			DealerContinuation: false,
 		},
 		CreatedAt: time.Now(),
 	}
@@ -364,6 +366,14 @@ func (m *Manager) ConfigureRoom(code string, userID string, config models.RoomCo
 	}
 
 	room.Config = config
+
+	// Reset all human players' ready states so they re-confirm
+	for _, p := range room.Players {
+		if p != nil && !p.IsBot {
+			p.Ready = false
+		}
+	}
+
 	return nil
 }
 
@@ -587,35 +597,112 @@ func (m *Manager) HandleDisconnect(code string, seat int) {
 	}
 
 	room.mu.Lock()
-	defer room.mu.Unlock()
 
-	if room.Players[seat] != nil {
-		room.Players[seat].Connected = false
+	if room.Players[seat] == nil {
+		room.mu.Unlock()
+		return
+	}
+
+	room.Players[seat].Connected = false
+
+	// In lobby: unready the player and broadcast ready state change
+	if room.Status == StatusWaiting && room.Players[seat].Ready {
+		room.Players[seat].Ready = false
+		readySeat := seat
+		m.hub.BroadcastToRoom(code, models.ServerMessage{
+			Type: models.MsgPlayerReadyServer,
+			Seat: &readySeat,
+		})
 	}
 
 	seatVal := seat
+	isLobby := room.Status == StatusWaiting
 	timeout := 120
+	if isLobby {
+		timeout = 60
+	}
 	m.hub.BroadcastToRoom(code, models.ServerMessage{
 		Type:           models.MsgPlayerDisconnected,
 		Seat:           &seatVal,
 		TimeoutSeconds: &timeout,
 	})
 
+	room.mu.Unlock()
+
 	// Start disconnect timeout
 	go func() {
-		time.Sleep(120 * time.Second)
-		room.mu.RLock()
-		stillDisconnected := room.Players[seat] != nil && !room.Players[seat].Connected
-		room.mu.RUnlock()
+		time.Sleep(time.Duration(timeout) * time.Second)
 
-		if stillDisconnected && room.Game != nil {
-			// Auto-play for disconnected player
+		room.mu.Lock()
+		stillDisconnected := room.Players[seat] != nil && !room.Players[seat].Connected
+		roomStatus := room.Status
+		room.mu.Unlock()
+
+		if !stillDisconnected {
+			return
+		}
+
+		if roomStatus == StatusWaiting {
+			// Lobby timeout: remove player from room
+			m.removeDisconnectedLobbyPlayer(code, seat)
+		} else if room.Game != nil {
+			// In-game timeout: auto-play for disconnected player
 			game := room.Game
 			if game.Phase == engine.PhasePlayerTurn && game.CurrentTurn == seat {
 				m.HandleAutoDiscard(code, seat)
 			}
 		}
 	}()
+}
+
+// removeDisconnectedLobbyPlayer removes a player who timed out in the lobby.
+func (m *Manager) removeDisconnectedLobbyPlayer(code string, seat int) {
+	m.mu.RLock()
+	room, ok := m.rooms[code]
+	m.mu.RUnlock()
+	if !ok {
+		return
+	}
+
+	room.mu.Lock()
+
+	// Re-check conditions under lock
+	if room.Status != StatusWaiting || room.Players[seat] == nil || room.Players[seat].Connected {
+		room.mu.Unlock()
+		return
+	}
+
+	room.Players[seat] = nil
+	room.PlayerCount--
+
+	// If host left, assign new human host or delete room
+	if seat == 0 {
+		newHost := -1
+		for i, p := range room.Players {
+			if p != nil && !p.IsBot {
+				newHost = i
+				break
+			}
+		}
+		if newHost == -1 {
+			// No human players left — clean up bots and delete room
+			room.BotController.CancelAll()
+			room.mu.Unlock()
+			m.mu.Lock()
+			delete(m.rooms, code)
+			m.mu.Unlock()
+			return
+		}
+		room.HostUserID = room.Players[newHost].UserID
+	}
+
+	room.mu.Unlock()
+
+	seatVal := seat
+	m.hub.BroadcastToRoom(code, models.ServerMessage{
+		Type: models.MsgPlayerLeft,
+		Seat: &seatVal,
+	})
 }
 
 // HandleReconnect restores a player's connection.
@@ -896,7 +983,7 @@ func (m *Manager) sendReactionPrompts(room *Room) {
 		var available []string
 		available = append(available, "pass")
 
-		if engine.CanWinWithTile(player.Hand, tile, game.LaiziTile).IsWin {
+		if !game.Config.ZimoOnly && engine.CanWinWithTile(player.Hand, tile, game.LaiziTile).IsWin {
 			available = append(available, "hu")
 		}
 		if engine.CanOpenGang(player.Hand, tile) {
@@ -1126,7 +1213,7 @@ func (m *Manager) buildBotReactionContext(room *Room, seat int) bot.GameContext 
 		ctx.AvailableActions = []string{"hu", "pass"}
 	} else {
 		ctx.AvailableActions = []string{"pass"}
-		if engine.CanWinWithTile(player.Hand, tile, game.LaiziTile).IsWin {
+		if !game.Config.ZimoOnly && engine.CanWinWithTile(player.Hand, tile, game.LaiziTile).IsWin {
 			ctx.AvailableActions = append(ctx.AvailableActions, "hu")
 		}
 		if engine.CanOpenGang(player.Hand, tile) {
@@ -1209,8 +1296,16 @@ func (m *Manager) handleRoundEnd(room *Room) {
 		return
 	}
 
-	// Advance dealer and start next round after a delay
-	room.DealerSeat = (room.DealerSeat + 1) % 4
+	// Advance dealer (unless dealer continuation is active and dealer won or draw)
+	shouldRotate := true
+	if room.Config.DealerContinuation {
+		if result == "draw" || (result == "hu" && lastEvent.PlayerSeat == room.DealerSeat) {
+			shouldRotate = false
+		}
+	}
+	if shouldRotate {
+		room.DealerSeat = (room.DealerSeat + 1) % 4
+	}
 
 	go func() {
 		time.Sleep(30 * time.Second)

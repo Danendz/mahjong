@@ -176,9 +176,11 @@ func createMessageRouter(roomMgr *room.Manager, database *db.DB) ws.MessageHandl
 			if msg.Config != nil {
 				err = roomMgr.ConfigureRoom(client.RoomCode, client.UserID, *msg.Config)
 				if err == nil {
+					rm := roomMgr.GetRoom(client.RoomCode)
 					client.Hub.BroadcastToRoom(client.RoomCode, models.ServerMessage{
-						Type:   models.MsgConfigUpdated,
-						Config: msg.Config,
+						Type:    models.MsgConfigUpdated,
+						Config:  msg.Config,
+						Players: rm.GetPlayerInfos(),
 					})
 				}
 			}

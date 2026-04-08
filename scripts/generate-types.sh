@@ -47,6 +47,8 @@ export interface RoomConfig {
   turn_timer: 10 | 15 | 20 | 30
   reaction_timer: 5 | 8 | 10 | 15
   num_rounds: 4 | 8 | 16
+  zimo_only: boolean
+  dealer_continuation: boolean
 }
 
 export interface PlayerInfo {
@@ -144,6 +146,7 @@ export interface PlayerReadyServerMsg {
 export interface ConfigUpdatedMsg {
   type: 'config_updated'
   config: RoomConfig
+  players?: PlayerInfo[]
 }
 
 export interface GameStartedMsg {
@@ -370,11 +373,13 @@ const (
 )
 
 type RoomConfig struct {
-	ScoreCap      int          `json:"score_cap"`
-	OpenCallMode  OpenCallMode `json:"open_call_mode"`
-	TurnTimer     int          `json:"turn_timer"`
-	ReactionTimer int          `json:"reaction_timer"`
-	NumRounds     int          `json:"num_rounds"`
+	ScoreCap           int          `json:"score_cap"`
+	OpenCallMode       OpenCallMode `json:"open_call_mode"`
+	TurnTimer          int          `json:"turn_timer"`
+	ReactionTimer      int          `json:"reaction_timer"`
+	NumRounds          int          `json:"num_rounds"`
+	ZimoOnly           bool         `json:"zimo_only"`
+	DealerContinuation bool         `json:"dealer_continuation"`
 }
 
 type PlayerInfo struct {

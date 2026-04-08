@@ -4,13 +4,13 @@ import { useRouter } from 'vue-router'
 import { useRoomStore } from '../stores/room'
 import { useUserStore } from '../stores/user'
 import { useGameConnection } from '../composables/useGameConnection'
-import type { BotDifficulty } from '../types/generated'
+import type { BotDifficulty, RoomConfig } from '../types/generated'
 
 const props = defineProps<{ code: string }>()
 const router = useRouter()
 const roomStore = useRoomStore()
 const userStore = useUserStore()
-const { toggleReady, startGame, leaveRoom, addBot, removeBot, setBotDifficulty } = useGameConnection()
+const { toggleReady, startGame, leaveRoom, addBot, removeBot, setBotDifficulty, configureRoom } = useGameConnection()
 
 const isHost = computed(() => userStore.seat === 0)
 const canStart = computed(() => roomStore.allReady && roomStore.playerCount === 4)
@@ -34,7 +34,7 @@ watch(() => roomStore.status, (status) => {
   if (status === 'playing') {
     router.push({ name: 'game', params: { code: props.code } })
   }
-})
+}, { immediate: true })
 
 function handleLeave() {
   leaveRoom()
@@ -48,6 +48,19 @@ function copyCode() {
   navigator.clipboard.writeText(window.location.origin + '/room/' + props.code)
   copied.value = true
   setTimeout(() => { copied.value = false }, 1500)
+}
+
+// Settings panel
+const showSettings = ref(false)
+const editConfig = ref<RoomConfig>({ ...roomStore.config })
+
+watch(() => roomStore.config, (cfg) => {
+  editConfig.value = { ...cfg }
+}, { deep: true })
+
+function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]) {
+  editConfig.value[key] = value
+  configureRoom(editConfig.value)
 }
 </script>
 
@@ -131,11 +144,88 @@ function copyCode() {
         </div>
       </div>
 
-      <div class="config-summary">
+      <!-- Non-host: read-only summary -->
+      <div v-if="!isHost" class="config-summary">
         <span>{{ roomStore.config.num_rounds }} rounds</span>
         <span>Cap: {{ roomStore.config.score_cap || 'None' }}</span>
         <span>{{ roomStore.config.open_call_mode === 'koukou' ? '口口翻' : '开口翻' }}</span>
         <span>{{ roomStore.config.turn_timer }}s turns</span>
+        <span v-if="roomStore.config.zimo_only">Self-draw only</span>
+        <span v-if="roomStore.config.dealer_continuation">Dealer cont.</span>
+      </div>
+
+      <!-- Host: expandable settings panel -->
+      <div v-else class="settings-section">
+        <div class="settings-header" @click="showSettings = !showSettings">
+          <span class="settings-label">Game Settings</span>
+          <svg class="gear-icon" :class="{ open: showSettings }" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </div>
+
+        <div v-if="showSettings" class="settings-panel">
+          <div class="setting-row">
+            <label>Rounds</label>
+            <div class="segmented">
+              <button v-for="v in [4, 8, 16]" :key="v"
+                :class="{ active: editConfig.num_rounds === v }"
+                @click="setConfigValue('num_rounds', v as 4 | 8 | 16)">{{ v }}</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label>Score Cap</label>
+            <div class="segmented">
+              <button v-for="v in [200, 500, 1000, 0]" :key="v"
+                :class="{ active: editConfig.score_cap === v }"
+                @click="setConfigValue('score_cap', v as 200 | 500 | 1000 | 0)">{{ v === 0 ? 'None' : v }}</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label>Call Mode</label>
+            <div class="segmented">
+              <button :class="{ active: editConfig.open_call_mode === 'koukou' }"
+                @click="setConfigValue('open_call_mode', 'koukou')">口口翻</button>
+              <button :class="{ active: editConfig.open_call_mode === 'kaikou' }"
+                @click="setConfigValue('open_call_mode', 'kaikou')">开口翻</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label>Turn Timer</label>
+            <div class="segmented">
+              <button v-for="v in [10, 15, 20, 30]" :key="v"
+                :class="{ active: editConfig.turn_timer === v }"
+                @click="setConfigValue('turn_timer', v as 10 | 15 | 20 | 30)">{{ v }}s</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label>Reaction Timer</label>
+            <div class="segmented">
+              <button v-for="v in [5, 8, 10, 15]" :key="v"
+                :class="{ active: editConfig.reaction_timer === v }"
+                @click="setConfigValue('reaction_timer', v as 5 | 8 | 10 | 15)">{{ v }}s</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label>Self-draw Only</label>
+            <button class="toggle" :class="{ on: editConfig.zimo_only }"
+              @click="setConfigValue('zimo_only', !editConfig.zimo_only)">
+              <span class="toggle-knob" />
+            </button>
+          </div>
+
+          <div class="setting-row">
+            <label>Dealer Continues</label>
+            <button class="toggle" :class="{ on: editConfig.dealer_continuation }"
+              @click="setConfigValue('dealer_continuation', !editConfig.dealer_continuation)">
+              <span class="toggle-knob" />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="actions">
@@ -394,6 +484,145 @@ function copyCode() {
     padding: $spacing-xs $spacing-sm;
     border-radius: $border-radius-sm;
   }
+}
+
+.settings-section {
+  margin-bottom: $spacing-lg;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    border-color: $color-primary;
+  }
+}
+
+.settings-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.gear-icon {
+  opacity: 0.6;
+  transition: transform 0.3s ease, opacity 0.2s;
+
+  &.open {
+    transform: rotate(90deg);
+    opacity: 1;
+  }
+
+  .settings-header:hover & {
+    opacity: 1;
+  }
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  margin-top: $spacing-xs;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  label {
+    font-size: 0.8rem;
+    color: $color-text-muted;
+    white-space: nowrap;
+    min-width: 100px;
+  }
+}
+
+.segmented {
+  display: flex;
+
+  button {
+    background: $color-surface;
+    color: $color-text-muted;
+    border: 1px solid $color-border;
+    padding: $spacing-xs $spacing-sm;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+
+    &:first-child {
+      border-radius: $border-radius-sm 0 0 $border-radius-sm;
+    }
+
+    &:last-child {
+      border-radius: 0 $border-radius-sm $border-radius-sm 0;
+    }
+
+    &:not(:first-child) {
+      border-left: none;
+    }
+
+    &.active {
+      background: $color-primary;
+      color: $color-text;
+      border-color: $color-primary;
+
+      + button {
+        border-left-color: $color-primary;
+      }
+    }
+
+    &:hover:not(.active) {
+      background: color.adjust($color-surface, $lightness: 5%);
+      color: $color-text;
+    }
+  }
+}
+
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+
+  &.on {
+    background: $color-success;
+    border-color: $color-success;
+
+    .toggle-knob {
+      transform: translateX(18px);
+    }
+  }
+}
+
+.toggle-knob {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: $color-text;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
 }
 
 .actions {

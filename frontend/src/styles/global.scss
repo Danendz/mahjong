@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use 'variables' as *;
 
 *,
@@ -57,7 +58,7 @@ button {
   border: 1px solid $color-border;
 
   &:hover:not(:disabled) {
-    background: lighten($color-surface, 5%);
+    background: color.adjust($color-surface, $lightness: 5%);
   }
 }
 
@@ -66,7 +67,7 @@ button {
   color: $color-bg;
 
   &:hover:not(:disabled) {
-    background: lighten($color-success, 5%);
+    background: color.adjust($color-success, $lightness: 5%);
   }
 }
 

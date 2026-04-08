@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type {
-  TileCode, MeldInfo, ScoringBreakdown, ReactionAction,
+  TileCode, MeldInfo, ReactionAction,
   GameStateMsg, GameStartedMsg, YourTurnMsg, RoundEndMsg,
 } from '../types/generated'
 

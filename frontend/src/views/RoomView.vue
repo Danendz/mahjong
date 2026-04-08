@@ -159,6 +159,7 @@ function copyCode() {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '../styles/variables' as *;
 
 .room {
@@ -206,7 +207,7 @@ function copyCode() {
   user-select: all;
 
   &:hover {
-    background: lighten($color-surface, 5%);
+    background: color.adjust($color-surface, $lightness: 5%);
   }
 }
 

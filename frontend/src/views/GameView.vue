@@ -120,6 +120,7 @@ watch(() => gameStore.turnVersion, () => {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '../styles/variables' as *;
 
 .game-table {
@@ -134,7 +135,7 @@ watch(() => gameStore.turnVersion, () => {
   gap: $spacing-xs;
   padding: $spacing-xs;
   overflow: hidden;
-  background: darken($color-bg, 3%);
+  background: color.adjust($color-bg, $lightness: -3%);
 }
 
 .area-across {

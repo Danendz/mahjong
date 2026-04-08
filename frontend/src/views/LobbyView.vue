@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useGameConnection } from '../composables/useGameConnection'
 
 const router = useRouter()
+const route = useRoute()
 const session = useSession()
 const { joinRoom } = useGameConnection()
 
@@ -15,6 +16,23 @@ const loading = ref(false)
 const error = ref('')
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
+
+onMounted(() => {
+  const code = route.query.code
+  if (typeof code === 'string' && code.trim()) {
+    roomCode.value = code.trim().toUpperCase()
+    mode.value = 'join'
+  }
+})
+
+function handleBack() {
+  mode.value = 'menu'
+  roomCode.value = ''
+  error.value = ''
+  if (route.query.code) {
+    router.replace({ path: '/', query: {} })
+  }
+}
 
 async function ensureSession() {
   if (!session.isAuthenticated.value || !session.sessionToken.value) {
@@ -36,7 +54,7 @@ async function handleCreate() {
   try {
     if (!await ensureSession()) return
 
-    const res = await fetch(`${API_BASE}/api/rooms`, {
+    const res = await fetch(`${API_BASE}/api/mahjong/rooms`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -48,7 +66,7 @@ async function handleCreate() {
     if (!res.ok) throw new Error('Failed to create room')
     const data = await res.json()
 
-    joinRoom(data.code, nickname.value.trim(), session.sessionToken.value)
+    await joinRoom(data.code, nickname.value.trim(), session.sessionToken.value)
     router.push({ name: 'room', params: { code: data.code } })
   } catch (e: any) {
     error.value = e.message
@@ -69,7 +87,19 @@ async function handleJoin() {
     if (!await ensureSession()) return
 
     const code = roomCode.value.trim().toUpperCase()
-    joinRoom(code, nickname.value.trim(), session.sessionToken.value)
+
+    // Validate room exists before attempting WebSocket join
+    const res = await fetch(`${API_BASE}/api/mahjong/rooms/${code}`)
+    if (res.status === 404) {
+      error.value = 'Room not found'
+      return
+    }
+    if (!res.ok) {
+      error.value = 'Failed to check room'
+      return
+    }
+
+    await joinRoom(code, nickname.value.trim(), session.sessionToken.value)
     router.push({ name: 'room', params: { code } })
   } catch (e: any) {
     error.value = e.message
@@ -113,7 +143,7 @@ async function handleJoin() {
           <button class="btn-primary" :disabled="loading || !roomCode.trim()" @click="handleJoin">
             Join
           </button>
-          <button class="btn-secondary" @click="mode = 'menu'">
+          <button class="btn-secondary" @click="handleBack">
             Back
           </button>
         </div>

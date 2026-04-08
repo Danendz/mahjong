@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/mahjong/backend/internal/db"
 	"github.com/mahjong/backend/internal/engine"
 	"github.com/mahjong/backend/internal/models"
@@ -15,6 +16,11 @@ import (
 )
 
 func main() {
+	// Load .env file if present (ignored in production)
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -52,13 +58,13 @@ func main() {
 	// HTTP routes
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/mahjong/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
 	// REST: Create guest user and get session token
-	mux.HandleFunc("POST /api/auth/guest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/mahjong/auth/guest", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Nickname string `json:"nickname"`
 		}
@@ -94,7 +100,7 @@ func main() {
 	})
 
 	// REST: Create room
-	mux.HandleFunc("POST /api/rooms", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/mahjong/rooms", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			SessionToken string `json:"session_token"`
 			Nickname     string `json:"nickname"`
@@ -117,8 +123,23 @@ func main() {
 		})
 	})
 
+	// REST: Get room info
+	mux.HandleFunc("GET /api/mahjong/rooms/{code}", func(w http.ResponseWriter, r *http.Request) {
+		code := r.PathValue("code")
+		rm := roomMgr.GetRoom(code)
+		if rm == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"room not found"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(rm.GetInfo())
+	})
+
 	// WebSocket upgrade
-	mux.HandleFunc("GET /ws", wsHandler.ServeWS)
+	mux.HandleFunc("GET /api/mahjong/ws", wsHandler.ServeWS)
 
 	// CORS middleware for development
 	handler := corsMiddleware(mux)

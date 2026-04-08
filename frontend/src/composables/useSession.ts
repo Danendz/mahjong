@@ -13,7 +13,7 @@ const isAuthenticated = ref(!!sessionToken.value)
 
 export function useSession() {
   async function createGuestSession(name: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/api/auth/guest`, {
+    const res = await fetch(`${API_BASE}/api/mahjong/auth/guest`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nickname: name }),

@@ -606,6 +606,28 @@ func (r *Room) GetPlayerInfos() []models.PlayerInfo {
 	return infos
 }
 
+// RoomInfo is the JSON-serializable snapshot of a room for the REST API.
+type RoomInfo struct {
+	Code        string              `json:"code"`
+	Status      RoomStatus          `json:"status"`
+	PlayerCount int                 `json:"player_count"`
+	Players     []models.PlayerInfo `json:"players"`
+	Config      models.RoomConfig   `json:"config"`
+}
+
+// GetInfo returns a thread-safe snapshot of the room for the REST API.
+func (r *Room) GetInfo() RoomInfo {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return RoomInfo{
+		Code:        r.Code,
+		Status:      r.Status,
+		PlayerCount: r.PlayerCount,
+		Players:     r.GetPlayerInfos(),
+		Config:      r.Config,
+	}
+}
+
 // --- Internal helpers ---
 
 // handlePhaseTransition checks the current game phase and sends appropriate messages.

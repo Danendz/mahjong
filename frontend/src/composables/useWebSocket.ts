@@ -2,9 +2,14 @@ import { ref, readonly } from 'vue'
 import type { ClientMessage, ServerMessage } from '../types/generated'
 
 function getWsUrl(): string {
-  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL
+  const apiUrl = import.meta.env.VITE_API_URL
+  if (apiUrl) {
+    const url = new URL(apiUrl)
+    const proto = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${proto}//${url.host}/api/mahjong/ws`
+  }
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${proto}//${window.location.host}/ws`
+  return `${proto}//${window.location.host}/api/mahjong/ws`
 }
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'

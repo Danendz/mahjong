@@ -5,6 +5,7 @@ import { useGameStore } from '../stores/game'
 import type { ServerMessage, ClientMessage } from '../types/generated'
 
 let initialized = false
+let joinResolve: (() => void) | null = null
 
 export function useGameConnection() {
   const ws = useWebSocket()
@@ -22,6 +23,10 @@ export function useGameConnection() {
           userStore.setSeat(msg.your_seat!)
           gameStore.yourSeat = msg.your_seat!
           roomStore.setRoom(msg.code!, msg.room_id!, msg.config!, msg.players!)
+          if (joinResolve) {
+            joinResolve()
+            joinResolve = null
+          }
           break
 
         case 'player_joined':
@@ -107,12 +112,15 @@ export function useGameConnection() {
     ws.send(msg)
   }
 
-  function joinRoom(code: string, nickname: string, sessionToken: string) {
-    send({
-      type: 'join_room',
-      code,
-      nickname,
-      session_token: sessionToken,
+  function joinRoom(code: string, nickname: string, sessionToken: string): Promise<void> {
+    return new Promise((resolve) => {
+      joinResolve = resolve
+      send({
+        type: 'join_room',
+        code,
+        nickname,
+        session_token: sessionToken,
+      })
     })
   }
 

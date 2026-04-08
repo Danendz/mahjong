@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoomStore } from '../stores/room'
 import { useUserStore } from '../stores/user'
@@ -28,8 +28,12 @@ function handleLeave() {
   router.push({ name: 'lobby' })
 }
 
+const copied = ref(false)
+
 function copyCode() {
-  navigator.clipboard.writeText(props.code)
+  navigator.clipboard.writeText(window.location.origin + '/room/' + props.code)
+  copied.value = true
+  setTimeout(() => { copied.value = false }, 1500)
 }
 </script>
 
@@ -38,8 +42,14 @@ function copyCode() {
     <div class="room-card">
       <div class="room-header">
         <h2>Room</h2>
-        <div class="code-display" @click="copyCode" title="Click to copy">
-          {{ code }}
+        <div class="code-area">
+          <div class="code-display" @click="copyCode" title="Click to copy invite link">
+            {{ code }}
+            <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </div>
+          <Transition name="fade">
+            <span v-if="copied" class="copied-tooltip">Copied!</span>
+          </Transition>
         </div>
       </div>
 
@@ -127,7 +137,14 @@ function copyCode() {
   h2 { font-size: 1.5rem; }
 }
 
+.code-area {
+  position: relative;
+}
+
 .code-display {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
   background: $color-surface;
   padding: $spacing-sm $spacing-md;
   border-radius: $border-radius;
@@ -141,6 +158,35 @@ function copyCode() {
   &:hover {
     background: lighten($color-surface, 5%);
   }
+}
+
+.copy-icon {
+  opacity: 0.6;
+  vertical-align: middle;
+  flex-shrink: 0;
+
+  .code-display:hover & {
+    opacity: 1;
+  }
+}
+
+.copied-tooltip {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: $spacing-xs;
+  font-size: 0.8rem;
+  color: $color-success;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-leave-to {
+  opacity: 0;
 }
 
 .players {

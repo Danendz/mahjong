@@ -37,6 +37,9 @@ func main() {
 			log.Printf("Warning: database unavailable: %v", err)
 		} else {
 			defer database.Close()
+			if err := database.Migrate(); err != nil {
+				log.Fatalf("Migration failed: %v", err)
+			}
 		}
 	}
 

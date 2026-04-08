@@ -142,4 +142,19 @@ const tileDisplay = computed(() => {
 .suit-dragon-red { color: #c24040; }
 .suit-dragon-green { color: #2d7a3a; }
 .suit-dragon-white { color: #666; }
+
+@media (max-width: 480px) {
+  .tile {
+    width: 30px;
+    height: 42px;
+
+    &.small {
+      width: 22px;
+      height: 30px;
+    }
+  }
+
+  .char { font-size: 0.95rem; }
+  .suit { font-size: 0.5rem; }
+}
 </style>

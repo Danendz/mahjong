@@ -4,7 +4,7 @@ const STORAGE_KEY_TOKEN = 'mahjong_session_token'
 const STORAGE_KEY_USER_ID = 'mahjong_user_id'
 const STORAGE_KEY_NICKNAME = 'mahjong_nickname'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 const sessionToken = ref(localStorage.getItem(STORAGE_KEY_TOKEN) || '')
 const userId = ref(localStorage.getItem(STORAGE_KEY_USER_ID) || '')

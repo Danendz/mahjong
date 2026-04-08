@@ -1,7 +1,11 @@
 import { ref, readonly } from 'vue'
 import type { ClientMessage, ServerMessage } from '../types/generated'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws'
+function getWsUrl(): string {
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${window.location.host}/ws`
+}
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
 
@@ -25,7 +29,7 @@ export function useWebSocket() {
 
     status.value = reconnectAttempts > 0 ? 'reconnecting' : 'connecting'
 
-    socket = new WebSocket(WS_URL)
+    socket = new WebSocket(getWsUrl())
 
     socket.onopen = () => {
       status.value = 'connected'

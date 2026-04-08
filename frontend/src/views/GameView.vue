@@ -8,6 +8,7 @@ import OpponentStrip from '../components/game/OpponentStrip.vue'
 import ActionBar from '../components/game/ActionBar.vue'
 import LaiziIndicator from '../components/game/LaiziIndicator.vue'
 import GameInfo from '../components/game/GameInfo.vue'
+import TurnTimer from '../components/game/TurnTimer.vue'
 import ScoringOverlay from '../components/game/ScoringOverlay.vue'
 
 defineProps<{ code: string }>()
@@ -39,7 +40,10 @@ const opponents = computed(() => {
     <div class="game-center">
       <LaiziIndicator />
       <DiscardPool />
-      <GameInfo />
+      <div class="info-row">
+        <GameInfo />
+        <TurnTimer />
+      </div>
     </div>
 
     <div class="game-bottom">
@@ -88,10 +92,35 @@ const opponents = computed(() => {
   padding: $spacing-sm;
 }
 
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
 .game-bottom {
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
   padding: $spacing-sm;
+}
+
+@media (max-width: 480px) {
+  .game-top {
+    min-height: 60px;
+    gap: $spacing-xs;
+    padding: $spacing-xs;
+    flex-wrap: wrap;
+  }
+
+  .game-center {
+    gap: $spacing-sm;
+    padding: $spacing-xs;
+  }
+
+  .game-bottom {
+    gap: $spacing-xs;
+    padding: $spacing-xs;
+  }
 }
 </style>

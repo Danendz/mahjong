@@ -14,7 +14,7 @@ const mode = ref<'menu' | 'join'>('menu')
 const loading = ref(false)
 const error = ref('')
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 async function ensureSession() {
   if (!session.isAuthenticated.value || !session.sessionToken.value) {

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useSession } from '../composables/useSession'
 import { useGameConnection } from '../composables/useGameConnection'
+import LanguageSelector from '../components/LanguageSelector.vue'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const session = useSession()
 const { joinRoom } = useGameConnection()
 
@@ -37,7 +40,7 @@ function handleBack() {
 async function ensureSession() {
   if (!session.isAuthenticated.value || !session.sessionToken.value) {
     if (!nickname.value.trim()) {
-      error.value = 'Please enter a nickname'
+      error.value = t('lobby.errors.nicknameRequired')
       return false
     }
     await session.createGuestSession(nickname.value.trim())
@@ -63,7 +66,7 @@ async function handleCreate() {
       }),
     })
 
-    if (!res.ok) throw new Error('Failed to create room')
+    if (!res.ok) throw new Error(t('lobby.errors.createFailed'))
     const data = await res.json()
 
     await joinRoom(data.code, nickname.value.trim(), session.sessionToken.value)
@@ -78,7 +81,7 @@ async function handleCreate() {
 async function handleJoin() {
   error.value = ''
   if (!roomCode.value.trim()) {
-    error.value = 'Please enter a room code'
+    error.value = t('lobby.errors.roomCodeRequired')
     return
   }
   loading.value = true
@@ -91,11 +94,11 @@ async function handleJoin() {
     // Validate room exists before attempting WebSocket join
     const res = await fetch(`${API_BASE}/api/mahjong/rooms/${code}`)
     if (res.status === 404) {
-      error.value = 'Room not found'
+      error.value = t('lobby.errors.roomNotFound')
       return
     }
     if (!res.ok) {
-      error.value = 'Failed to check room'
+      error.value = t('lobby.errors.checkFailed')
       return
     }
 
@@ -111,40 +114,43 @@ async function handleJoin() {
 
 <template>
   <div class="lobby">
+    <div class="lang-wrapper">
+      <LanguageSelector />
+    </div>
     <div class="lobby-card">
-      <h1 class="title">武汉麻将</h1>
-      <p class="subtitle">Wuhan Mahjong</p>
+      <h1 class="title">{{ $t('lobby.title') }}</h1>
+      <p v-if="$t('lobby.subtitle')" class="subtitle">{{ $t('lobby.subtitle') }}</p>
 
       <div class="form">
         <input
           v-model="nickname"
-          placeholder="Your nickname"
+          :placeholder="$t('lobby.nicknamePlaceholder')"
           maxlength="16"
           @keyup.enter="mode === 'join' ? handleJoin() : handleCreate()"
         />
 
         <div v-if="mode === 'menu'" class="actions">
           <button class="btn-primary" :disabled="loading || !nickname.trim()" @click="handleCreate">
-            Create Room
+            {{ $t('lobby.createRoom') }}
           </button>
           <button class="btn-secondary" :disabled="!nickname.trim()" @click="mode = 'join'">
-            Join Room
+            {{ $t('lobby.joinRoom') }}
           </button>
         </div>
 
         <div v-else class="actions">
           <input
             v-model="roomCode"
-            placeholder="Room code (e.g. H7KM3P)"
+            :placeholder="$t('lobby.roomCodePlaceholder')"
             maxlength="6"
             class="code-input"
             @keyup.enter="handleJoin"
           />
           <button class="btn-primary" :disabled="loading || !roomCode.trim()" @click="handleJoin">
-            Join
+            {{ $t('lobby.join') }}
           </button>
           <button class="btn-secondary" @click="handleBack">
-            Back
+            {{ $t('common.back') }}
           </button>
         </div>
 
@@ -163,6 +169,13 @@ async function handleJoin() {
   align-items: center;
   justify-content: center;
   padding: $spacing-md;
+  position: relative;
+}
+
+.lang-wrapper {
+  position: absolute;
+  top: $spacing-md;
+  right: $spacing-md;
 }
 
 .lobby-card {

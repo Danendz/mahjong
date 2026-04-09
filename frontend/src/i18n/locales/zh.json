@@ -1,0 +1,153 @@
+{
+  "common": {
+    "back": "返回",
+    "cancel": "取消",
+    "you": "你"
+  },
+  "lobby": {
+    "title": "武汉麻将",
+    "subtitle": "",
+    "nicknamePlaceholder": "你的昵称",
+    "roomCodePlaceholder": "房间号 (例: H7KM3P)",
+    "createRoom": "创建房间",
+    "joinRoom": "加入房间",
+    "join": "加入",
+    "errors": {
+      "nicknameRequired": "请输入昵称",
+      "roomCodeRequired": "请输入房间号",
+      "roomNotFound": "房间不存在",
+      "checkFailed": "查询房间失败",
+      "createFailed": "创建房间失败"
+    }
+  },
+  "room": {
+    "title": "房间",
+    "copyInvite": "点击复制邀请链接",
+    "copied": "已复制!",
+    "seats": {
+      "east": "东",
+      "south": "南",
+      "west": "西",
+      "north": "北"
+    },
+    "hostTag": "房主",
+    "botTag": "机器人",
+    "ready": "已准备",
+    "notReady": "未准备",
+    "waiting": "等待中...",
+    "addBot": "+ 添加机器人",
+    "removeBot": "移除",
+    "difficulty": {
+      "easy": "简单",
+      "medium": "中等",
+      "hard": "困难"
+    },
+    "toggleReady": "切换准备",
+    "startGame": "开始游戏",
+    "leave": "离开",
+    "settings": {
+      "title": "游戏设置",
+      "rounds": "局数",
+      "scoreCap": "封顶分",
+      "scoreCapNone": "无",
+      "callMode": "叫牌模式",
+      "callModeKoukou": "口口翻",
+      "callModeKaikou": "开口翻",
+      "callModeKoukouTooltip": "门清才算番数,亮牌后不计",
+      "callModeKaikouTooltip": "亮牌后仍可算番数",
+      "turnTimer": "出牌倒计时",
+      "reactionTimer": "反应倒计时",
+      "secondsSuffix": "秒",
+      "zimoOnly": "只允许自摸",
+      "dealerContinuation": "庄家连庄"
+    },
+    "summary": {
+      "rounds": "{count} 局",
+      "cap": "封顶: {value}",
+      "turnTimer": "{seconds}秒出牌",
+      "zimoOnly": "只允许自摸",
+      "dealerCont": "连庄"
+    }
+  },
+  "game": {
+    "action": {
+      "hu": "胡",
+      "huSub": "",
+      "gang": "杠",
+      "gangSub": "",
+      "pong": "碰",
+      "pongSub": "",
+      "chi": "吃",
+      "chiSub": "",
+      "pass": "过",
+      "passSub": "",
+      "zimo": "自摸",
+      "zimoSub": "",
+      "huScorePreview": "{points}分"
+    },
+    "meld": {
+      "chi": "吃",
+      "pong": "碰",
+      "openGang": "杠",
+      "closedGang": "暗杠",
+      "addGang": "补杠"
+    },
+    "drawnLabel": "摸",
+    "tenpaiLabel": "听",
+    "laizi": {
+      "label": "癞子",
+      "indicator": "翻",
+      "wild": "癞子"
+    },
+    "status": {
+      "reactTo": "回应 {name} 的出牌",
+      "yourTurn": "轮到你 — 请出牌",
+      "otherTurn": "{name} 出牌中"
+    },
+    "opponent": {
+      "right": "下家",
+      "across": "对家",
+      "left": "上家",
+      "fallbackName": "玩家",
+      "tiles": "{count} 张",
+      "botBadge": "机",
+      "disconnectedBadge": "断"
+    }
+  },
+  "scoring": {
+    "wins": "{name} 胡了!",
+    "draw": "流局",
+    "base": "底分:",
+    "perLoser": "每家: {amount}",
+    "capped": "(封顶)",
+    "delta": "{name}: {delta}",
+    "rankedScore": "{name}: {score}",
+    "nextRoundIn": "{countdown}秒后开始下一局...",
+    "starting": "开始中..."
+  },
+  "connection": {
+    "connecting": "连接中...",
+    "reconnecting": "重新连接中...",
+    "disconnected": "已断开"
+  },
+  "errors": {
+    "game already in progress": "游戏已经开始",
+    "room is full": "房间已满",
+    "room not found": "房间不存在",
+    "can only add bots in waiting state": "只能在等待状态添加机器人",
+    "only the host can add bots": "只有房主可以添加机器人",
+    "invalid seat": "无效座位",
+    "seat is occupied": "座位已被占用",
+    "can only remove bots in waiting state": "只能在等待状态移除机器人",
+    "only the host can remove bots": "只有房主可以移除机器人",
+    "no bot at this seat": "此座位没有机器人",
+    "can only change difficulty in waiting state": "只能在等待状态修改难度",
+    "only the host can change bot difficulty": "只有房主可以修改机器人难度",
+    "only the host can configure the room": "只有房主可以配置房间",
+    "cannot configure while game is in progress": "游戏进行中无法修改设置",
+    "only the host can start the game": "只有房主可以开始游戏",
+    "game already started": "游戏已经开始",
+    "all players must be ready": "所有玩家必须准备",
+    "no active game": "没有进行中的游戏"
+  }
+}

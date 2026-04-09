@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../../stores/game'
 import { useRoomStore } from '../../stores/room'
 import MahjongTile from './MahjongTile.vue'
@@ -9,8 +10,11 @@ const props = defineProps<{
   position: number // 0=right, 1=across, 2=left
 }>()
 
+const { t } = useI18n()
 const gameStore = useGameStore()
 const roomStore = useRoomStore()
+
+const positionKeys = ['right', 'across', 'left'] as const
 
 const player = computed(() => roomStore.players.find(p => p.seat === props.seat))
 const tileCount = computed(() => gameStore.tileCounts[String(props.seat)] || 0)
@@ -18,17 +22,17 @@ const melds = computed(() => gameStore.openMelds[String(props.seat)] || [])
 const isCurrentTurn = computed(() => gameStore.currentTurnSeat === props.seat)
 const isDisconnected = computed(() => gameStore.disconnectedSeats.has(props.seat))
 const isBot = computed(() => player.value?.is_bot === true)
-const positionLabel = computed(() => ['Right', 'Across', 'Left'][props.position])
+const positionLabel = computed(() => t(`game.opponent.${positionKeys[props.position]}`))
 </script>
 
 <template>
   <div class="opponent" :class="{ active: isCurrentTurn, disconnected: isDisconnected }">
     <div class="opponent-info">
-      <span class="name">{{ player?.nickname || 'Player' }}</span>
+      <span class="name">{{ player?.nickname || $t('game.opponent.fallbackName') }}</span>
       <span class="position">{{ positionLabel }}</span>
-      <span class="tile-count">{{ tileCount }} tiles</span>
-      <span v-if="isBot" class="bot-badge">BOT</span>
-      <span v-if="isDisconnected" class="dc-badge">DC</span>
+      <span class="tile-count">{{ $t('game.opponent.tiles', { count: tileCount }) }}</span>
+      <span v-if="isBot" class="bot-badge">{{ $t('game.opponent.botBadge') }}</span>
+      <span v-if="isDisconnected" class="dc-badge">{{ $t('game.opponent.disconnectedBadge') }}</span>
     </div>
 
     <div v-if="melds.length" class="melds">

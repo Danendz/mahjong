@@ -50,9 +50,9 @@ const rankedScores = computed(() => {
   <div v-if="gameStore.roundResult" class="overlay">
     <div class="overlay-card">
       <h2 v-if="gameStore.roundResult.result === 'hu'">
-        {{ playerName(gameStore.roundResult.winner_seat!) }} Wins!
+        {{ $t('scoring.wins', { name: playerName(gameStore.roundResult.winner_seat!) }) }}
       </h2>
-      <h2 v-else>Draw</h2>
+      <h2 v-else>{{ $t('scoring.draw') }}</h2>
 
       <div v-if="gameStore.roundResult.winning_hand" class="winning-hand">
         <MahjongTile
@@ -66,7 +66,7 @@ const rankedScores = computed(() => {
 
       <div v-if="gameStore.roundResult.scoring" class="scoring">
         <div class="score-line">
-          Base: {{ gameStore.roundResult.scoring.base_points }}
+          {{ $t('scoring.base') }} {{ gameStore.roundResult.scoring.base_points }}
         </div>
         <div
           v-for="(mult, idx) in gameStore.roundResult.scoring.multipliers"
@@ -76,8 +76,8 @@ const rankedScores = computed(() => {
           {{ mult.reason }}: x{{ mult.value }}
         </div>
         <div class="score-total">
-          Per loser: {{ gameStore.roundResult.scoring.total_per_loser }}
-          <span v-if="gameStore.roundResult.scoring.capped">(capped)</span>
+          {{ $t('scoring.perLoser', { amount: gameStore.roundResult.scoring.total_per_loser }) }}
+          <span v-if="gameStore.roundResult.scoring.capped">{{ $t('scoring.capped') }}</span>
         </div>
       </div>
 
@@ -88,7 +88,7 @@ const rankedScores = computed(() => {
           class="delta"
           :class="{ positive: delta > 0, negative: delta < 0 }"
         >
-          {{ playerName(Number(seat)) }}: {{ delta > 0 ? '+' : '' }}{{ delta }}
+          {{ $t('scoring.delta', { name: playerName(Number(seat)), delta: (delta > 0 ? '+' : '') + delta }) }}
         </div>
       </div>
 
@@ -97,15 +97,15 @@ const rankedScores = computed(() => {
           <span class="rank-badge" :style="{ backgroundColor: entry.color }">
             {{ entry.rank }}
           </span>
-          {{ playerName(entry.seat) }}: {{ entry.score }}
+          {{ $t('scoring.rankedScore', { name: playerName(entry.seat), score: entry.score }) }}
         </div>
       </div>
 
       <div v-if="countdown > 0" class="countdown">
-        Next round in {{ countdown }}s...
+        {{ $t('scoring.nextRoundIn', { countdown }) }}
       </div>
       <div v-else class="countdown">
-        Starting...
+        {{ $t('scoring.starting') }}
       </div>
     </div>
   </div>

@@ -7,13 +7,13 @@ const { status } = useGameConnection()
 <template>
   <div v-if="status !== 'connected'" class="connection-status" :class="status">
     <template v-if="status === 'connecting'">
-      <span class="dot"></span> Connecting...
+      <span class="dot"></span> {{ $t('connection.connecting') }}
     </template>
     <template v-else-if="status === 'reconnecting'">
-      <span class="dot"></span> Reconnecting...
+      <span class="dot"></span> {{ $t('connection.reconnecting') }}
     </template>
     <template v-else>
-      <span class="dot"></span> Disconnected
+      <span class="dot"></span> {{ $t('connection.disconnected') }}
     </template>
   </div>
 </template>

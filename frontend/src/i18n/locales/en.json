@@ -1,0 +1,153 @@
+{
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "you": "you"
+  },
+  "lobby": {
+    "title": "武汉麻将",
+    "subtitle": "Wuhan Mahjong",
+    "nicknamePlaceholder": "Your nickname",
+    "roomCodePlaceholder": "Room code (e.g. H7KM3P)",
+    "createRoom": "Create Room",
+    "joinRoom": "Join Room",
+    "join": "Join",
+    "errors": {
+      "nicknameRequired": "Please enter a nickname",
+      "roomCodeRequired": "Please enter a room code",
+      "roomNotFound": "Room not found",
+      "checkFailed": "Failed to check room",
+      "createFailed": "Failed to create room"
+    }
+  },
+  "room": {
+    "title": "Room",
+    "copyInvite": "Click to copy invite link",
+    "copied": "Copied!",
+    "seats": {
+      "east": "East",
+      "south": "South",
+      "west": "West",
+      "north": "North"
+    },
+    "hostTag": "HOST",
+    "botTag": "BOT",
+    "ready": "Ready",
+    "notReady": "Not ready",
+    "waiting": "Waiting...",
+    "addBot": "+ Add Bot",
+    "removeBot": "Remove",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "toggleReady": "Toggle Ready",
+    "startGame": "Start Game",
+    "leave": "Leave",
+    "settings": {
+      "title": "Game Settings",
+      "rounds": "Rounds",
+      "scoreCap": "Score Cap",
+      "scoreCapNone": "None",
+      "callMode": "Call Mode",
+      "callModeKoukou": "Kǒukǒu Fān",
+      "callModeKaikou": "Kāikǒu Fān",
+      "callModeKoukouTooltip": "Closed call mode — calls only count toward the fān when your hand is concealed before winning",
+      "callModeKaikouTooltip": "Open call mode — calls always count toward the fān, even after melds are revealed",
+      "turnTimer": "Turn Timer",
+      "reactionTimer": "Reaction Timer",
+      "secondsSuffix": "s",
+      "zimoOnly": "Self-draw Only",
+      "dealerContinuation": "Dealer Continues"
+    },
+    "summary": {
+      "rounds": "{count} rounds",
+      "cap": "Cap: {value}",
+      "turnTimer": "{seconds}s turns",
+      "zimoOnly": "Self-draw only",
+      "dealerCont": "Dealer cont."
+    }
+  },
+  "game": {
+    "action": {
+      "hu": "胡",
+      "huSub": "Hú",
+      "gang": "杠",
+      "gangSub": "Gàng",
+      "pong": "碰",
+      "pongSub": "Pèng",
+      "chi": "吃",
+      "chiSub": "Chī",
+      "pass": "过",
+      "passSub": "Guò",
+      "zimo": "自摸",
+      "zimoSub": "Zìmō",
+      "huScorePreview": "{points}pts"
+    },
+    "meld": {
+      "chi": "吃",
+      "pong": "碰",
+      "openGang": "杠",
+      "closedGang": "暗杠",
+      "addGang": "补杠"
+    },
+    "drawnLabel": "摸",
+    "tenpaiLabel": "听",
+    "laizi": {
+      "label": "Laizi",
+      "indicator": "翻",
+      "wild": "癞子"
+    },
+    "status": {
+      "reactTo": "React to {name}'s discard",
+      "yourTurn": "Your turn — discard a tile",
+      "otherTurn": "{name}'s turn"
+    },
+    "opponent": {
+      "right": "Right",
+      "across": "Across",
+      "left": "Left",
+      "fallbackName": "Player",
+      "tiles": "{count} tiles",
+      "botBadge": "BOT",
+      "disconnectedBadge": "DC"
+    }
+  },
+  "scoring": {
+    "wins": "{name} Wins!",
+    "draw": "Draw",
+    "base": "Base:",
+    "perLoser": "Per loser: {amount}",
+    "capped": "(capped)",
+    "delta": "{name}: {delta}",
+    "rankedScore": "{name}: {score}",
+    "nextRoundIn": "Next round in {countdown}s...",
+    "starting": "Starting..."
+  },
+  "connection": {
+    "connecting": "Connecting...",
+    "reconnecting": "Reconnecting...",
+    "disconnected": "Disconnected"
+  },
+  "errors": {
+    "game already in progress": "Game already in progress",
+    "room is full": "Room is full",
+    "room not found": "Room not found",
+    "can only add bots in waiting state": "Can only add bots while waiting",
+    "only the host can add bots": "Only the host can add bots",
+    "invalid seat": "Invalid seat",
+    "seat is occupied": "Seat is occupied",
+    "can only remove bots in waiting state": "Can only remove bots while waiting",
+    "only the host can remove bots": "Only the host can remove bots",
+    "no bot at this seat": "No bot at this seat",
+    "can only change difficulty in waiting state": "Can only change difficulty while waiting",
+    "only the host can change bot difficulty": "Only the host can change bot difficulty",
+    "only the host can configure the room": "Only the host can configure the room",
+    "cannot configure while game is in progress": "Cannot configure while game is in progress",
+    "only the host can start the game": "Only the host can start the game",
+    "game already started": "Game already started",
+    "all players must be ready": "All players must be ready",
+    "no active game": "No active game"
+  }
+}

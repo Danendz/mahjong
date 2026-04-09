@@ -1,0 +1,153 @@
+{
+  "common": {
+    "back": "Назад",
+    "cancel": "Отмена",
+    "you": "вы"
+  },
+  "lobby": {
+    "title": "武汉麻将",
+    "subtitle": "Уханьский маджонг",
+    "nicknamePlaceholder": "Ваш ник",
+    "roomCodePlaceholder": "Код комнаты (напр. H7KM3P)",
+    "createRoom": "Создать комнату",
+    "joinRoom": "Присоединиться",
+    "join": "Войти",
+    "errors": {
+      "nicknameRequired": "Пожалуйста, введите ник",
+      "roomCodeRequired": "Пожалуйста, введите код комнаты",
+      "roomNotFound": "Комната не найдена",
+      "checkFailed": "Не удалось проверить комнату",
+      "createFailed": "Не удалось создать комнату"
+    }
+  },
+  "room": {
+    "title": "Комната",
+    "copyInvite": "Нажмите, чтобы скопировать ссылку",
+    "copied": "Скопировано!",
+    "seats": {
+      "east": "Восток",
+      "south": "Юг",
+      "west": "Запад",
+      "north": "Север"
+    },
+    "hostTag": "ХОСТ",
+    "botTag": "БОТ",
+    "ready": "Готов",
+    "notReady": "Не готов",
+    "waiting": "Ожидание...",
+    "addBot": "+ Добавить бота",
+    "removeBot": "Убрать",
+    "difficulty": {
+      "easy": "Лёгкий",
+      "medium": "Средний",
+      "hard": "Сложный"
+    },
+    "toggleReady": "Готовность",
+    "startGame": "Начать игру",
+    "leave": "Выйти",
+    "settings": {
+      "title": "Настройки игры",
+      "rounds": "Раунды",
+      "scoreCap": "Макс. очки",
+      "scoreCapNone": "Нет",
+      "callMode": "Режим вскрытия",
+      "callModeKoukou": "Коукоу Фань",
+      "callModeKaikou": "Кайкоу Фань",
+      "callModeKoukouTooltip": "Закрытый режим — комбинации засчитываются только при закрытой руке перед победой",
+      "callModeKaikouTooltip": "Открытый режим — комбинации засчитываются даже после вскрытия",
+      "turnTimer": "Таймер хода",
+      "reactionTimer": "Таймер реакции",
+      "secondsSuffix": "с",
+      "zimoOnly": "Только самосбор",
+      "dealerContinuation": "Дилер продолжает"
+    },
+    "summary": {
+      "rounds": "{count} раундов",
+      "cap": "Макс: {value}",
+      "turnTimer": "ход {seconds}с",
+      "zimoOnly": "Только самосбор",
+      "dealerCont": "Дилер прод."
+    }
+  },
+  "game": {
+    "action": {
+      "hu": "胡",
+      "huSub": "Ху",
+      "gang": "杠",
+      "gangSub": "Ган",
+      "pong": "碰",
+      "pongSub": "Пэн",
+      "chi": "吃",
+      "chiSub": "Чи",
+      "pass": "过",
+      "passSub": "Пас",
+      "zimo": "自摸",
+      "zimoSub": "Цзымо",
+      "huScorePreview": "{points}оч."
+    },
+    "meld": {
+      "chi": "吃",
+      "pong": "碰",
+      "openGang": "杠",
+      "closedGang": "暗杠",
+      "addGang": "补杠"
+    },
+    "drawnLabel": "摸",
+    "tenpaiLabel": "听",
+    "laizi": {
+      "label": "Лайцзы",
+      "indicator": "翻",
+      "wild": "癞子"
+    },
+    "status": {
+      "reactTo": "Реагируйте на сброс {name}",
+      "yourTurn": "Ваш ход — сбросьте плитку",
+      "otherTurn": "Ход {name}"
+    },
+    "opponent": {
+      "right": "Справа",
+      "across": "Напротив",
+      "left": "Слева",
+      "fallbackName": "Игрок",
+      "tiles": "{count} плиток",
+      "botBadge": "БОТ",
+      "disconnectedBadge": "ОТКЛ"
+    }
+  },
+  "scoring": {
+    "wins": "{name} выиграл!",
+    "draw": "Ничья",
+    "base": "База:",
+    "perLoser": "С проигравшего: {amount}",
+    "capped": "(макс)",
+    "delta": "{name}: {delta}",
+    "rankedScore": "{name}: {score}",
+    "nextRoundIn": "Следующий раунд через {countdown}с...",
+    "starting": "Начинаем..."
+  },
+  "connection": {
+    "connecting": "Подключение...",
+    "reconnecting": "Переподключение...",
+    "disconnected": "Отключено"
+  },
+  "errors": {
+    "game already in progress": "Игра уже идёт",
+    "room is full": "Комната заполнена",
+    "room not found": "Комната не найдена",
+    "can only add bots in waiting state": "Ботов можно добавлять только в ожидании",
+    "only the host can add bots": "Только хост может добавлять ботов",
+    "invalid seat": "Неверное место",
+    "seat is occupied": "Место занято",
+    "can only remove bots in waiting state": "Ботов можно убирать только в ожидании",
+    "only the host can remove bots": "Только хост может убирать ботов",
+    "no bot at this seat": "На этом месте нет бота",
+    "can only change difficulty in waiting state": "Сложность можно менять только в ожидании",
+    "only the host can change bot difficulty": "Только хост может менять сложность ботов",
+    "only the host can configure the room": "Только хост может настраивать комнату",
+    "cannot configure while game is in progress": "Нельзя менять настройки во время игры",
+    "only the host can start the game": "Только хост может начать игру",
+    "game already started": "Игра уже началась",
+    "all players must be ready": "Все игроки должны быть готовы",
+    "no active game": "Нет активной игры"
+  }
+}

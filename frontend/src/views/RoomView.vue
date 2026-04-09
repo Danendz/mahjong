@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useRoomStore } from '../stores/room'
 import { useUserStore } from '../stores/user'
 import { useGameConnection } from '../composables/useGameConnection'
@@ -8,6 +9,7 @@ import type { BotDifficulty, RoomConfig } from '../types/generated'
 
 const props = defineProps<{ code: string }>()
 const router = useRouter()
+const { t } = useI18n()
 const roomStore = useRoomStore()
 const userStore = useUserStore()
 const { toggleReady, startGame, leaveRoom, addBot, removeBot, setBotDifficulty, configureRoom } = useGameConnection()
@@ -28,7 +30,9 @@ function handleDifficultyChange(seat: number, event: Event) {
   setBotDifficulty(seat, difficulty)
 }
 
-const seatLabels = ['East', 'South', 'West', 'North']
+const seatKeys = ['east', 'south', 'west', 'north'] as const
+const seatLabels = computed(() => seatKeys.map(k => t(`room.seats.${k}`)))
+const difficultyLabel = (d?: string) => (d ? t(`room.difficulty.${d}`) : '')
 
 watch(() => roomStore.status, (status) => {
   if (status === 'playing') {
@@ -68,14 +72,14 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
   <div class="room">
     <div class="room-card">
       <div class="room-header">
-        <h2>Room</h2>
+        <h2>{{ $t('room.title') }}</h2>
         <div class="code-area">
-          <div class="code-display" @click="copyCode" title="Click to copy invite link">
+          <div class="code-display" @click="copyCode" :title="$t('room.copyInvite')">
             {{ code }}
             <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </div>
           <Transition name="fade">
-            <span v-if="copied" class="copied-tooltip">Copied!</span>
+            <span v-if="copied" class="copied-tooltip">{{ $t('room.copied') }}</span>
           </Transition>
         </div>
       </div>
@@ -98,7 +102,7 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
           <template v-if="roomStore.players.find(p => p.seat === seatIdx - 1)?.is_bot">
             <div class="player-name">
               {{ roomStore.players.find(p => p.seat === seatIdx - 1)!.nickname }}
-              <span class="bot-tag">BOT</span>
+              <span class="bot-tag">{{ $t('room.botTag') }}</span>
             </div>
             <div class="bot-controls">
               <select
@@ -107,14 +111,14 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
                 :value="roomStore.players.find(p => p.seat === seatIdx - 1)?.difficulty"
                 @change="handleDifficultyChange(seatIdx - 1, $event)"
               >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
+                <option value="easy">{{ $t('room.difficulty.easy') }}</option>
+                <option value="medium">{{ $t('room.difficulty.medium') }}</option>
+                <option value="hard">{{ $t('room.difficulty.hard') }}</option>
               </select>
               <span v-else class="difficulty-label">
-                {{ roomStore.players.find(p => p.seat === seatIdx - 1)?.difficulty }}
+                {{ difficultyLabel(roomStore.players.find(p => p.seat === seatIdx - 1)?.difficulty) }}
               </span>
-              <button v-if="isHost" class="btn-remove" @click="handleRemoveBot(seatIdx - 1)">Remove</button>
+              <button v-if="isHost" class="btn-remove" @click="handleRemoveBot(seatIdx - 1)">{{ $t('room.removeBot') }}</button>
             </div>
           </template>
 
@@ -122,23 +126,23 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
           <template v-else-if="roomStore.players.find(p => p.seat === seatIdx - 1)">
             <div class="player-name">
               {{ roomStore.players.find(p => p.seat === seatIdx - 1)!.nickname }}
-              <span v-if="seatIdx - 1 === userStore.seat" class="you-tag">(you)</span>
-              <span v-if="seatIdx - 1 === 0" class="host-tag">HOST</span>
+              <span v-if="seatIdx - 1 === userStore.seat" class="you-tag">({{ $t('common.you') }})</span>
+              <span v-if="seatIdx - 1 === 0" class="host-tag">{{ $t('room.hostTag') }}</span>
             </div>
             <div class="ready-status" :class="{ active: roomStore.players.find(p => p.seat === seatIdx - 1)?.ready }">
-              {{ roomStore.players.find(p => p.seat === seatIdx - 1)?.ready ? 'Ready' : 'Not ready' }}
+              {{ roomStore.players.find(p => p.seat === seatIdx - 1)?.ready ? $t('room.ready') : $t('room.notReady') }}
             </div>
           </template>
 
           <!-- Empty seat -->
           <template v-else>
-            <div class="empty">Waiting...</div>
+            <div class="empty">{{ $t('room.waiting') }}</div>
             <button
               v-if="isHost && seatIdx - 1 !== 0"
               class="btn-add-bot"
               @click="handleAddBot(seatIdx - 1)"
             >
-              + Add Bot
+              {{ $t('room.addBot') }}
             </button>
           </template>
         </div>
@@ -146,18 +150,18 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
 
       <!-- Non-host: read-only summary -->
       <div v-if="!isHost" class="config-summary">
-        <span>{{ roomStore.config.num_rounds }} rounds</span>
-        <span>Cap: {{ roomStore.config.score_cap || 'None' }}</span>
-        <span>{{ roomStore.config.open_call_mode === 'koukou' ? '口口翻' : '开口翻' }}</span>
-        <span>{{ roomStore.config.turn_timer }}s turns</span>
-        <span v-if="roomStore.config.zimo_only">Self-draw only</span>
-        <span v-if="roomStore.config.dealer_continuation">Dealer cont.</span>
+        <span>{{ $t('room.summary.rounds', { count: roomStore.config.num_rounds }) }}</span>
+        <span>{{ $t('room.summary.cap', { value: roomStore.config.score_cap || $t('room.settings.scoreCapNone') }) }}</span>
+        <span>{{ roomStore.config.open_call_mode === 'koukou' ? $t('room.settings.callModeKoukou') : $t('room.settings.callModeKaikou') }}</span>
+        <span>{{ $t('room.summary.turnTimer', { seconds: roomStore.config.turn_timer }) }}</span>
+        <span v-if="roomStore.config.zimo_only">{{ $t('room.summary.zimoOnly') }}</span>
+        <span v-if="roomStore.config.dealer_continuation">{{ $t('room.summary.dealerCont') }}</span>
       </div>
 
       <!-- Host: expandable settings panel -->
       <div v-else class="settings-section">
         <div class="settings-header" @click="showSettings = !showSettings">
-          <span class="settings-label">Game Settings</span>
+          <span class="settings-label">{{ $t('room.settings.title') }}</span>
           <svg class="gear-icon" :class="{ open: showSettings }" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
@@ -165,7 +169,7 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
 
         <div v-if="showSettings" class="settings-panel">
           <div class="setting-row">
-            <label>Rounds</label>
+            <label>{{ $t('room.settings.rounds') }}</label>
             <div class="segmented">
               <button v-for="v in [4, 8, 16]" :key="v"
                 :class="{ active: editConfig.num_rounds === v }"
@@ -174,44 +178,46 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
           </div>
 
           <div class="setting-row">
-            <label>Score Cap</label>
+            <label>{{ $t('room.settings.scoreCap') }}</label>
             <div class="segmented">
               <button v-for="v in [200, 500, 1000, 0]" :key="v"
                 :class="{ active: editConfig.score_cap === v }"
-                @click="setConfigValue('score_cap', v as 200 | 500 | 1000 | 0)">{{ v === 0 ? 'None' : v }}</button>
+                @click="setConfigValue('score_cap', v as 200 | 500 | 1000 | 0)">{{ v === 0 ? $t('room.settings.scoreCapNone') : v }}</button>
             </div>
           </div>
 
           <div class="setting-row">
-            <label>Call Mode</label>
+            <label>{{ $t('room.settings.callMode') }}</label>
             <div class="segmented">
               <button :class="{ active: editConfig.open_call_mode === 'koukou' }"
-                @click="setConfigValue('open_call_mode', 'koukou')">口口翻</button>
+                :title="$t('room.settings.callModeKoukouTooltip')"
+                @click="setConfigValue('open_call_mode', 'koukou')">{{ $t('room.settings.callModeKoukou') }}</button>
               <button :class="{ active: editConfig.open_call_mode === 'kaikou' }"
-                @click="setConfigValue('open_call_mode', 'kaikou')">开口翻</button>
+                :title="$t('room.settings.callModeKaikouTooltip')"
+                @click="setConfigValue('open_call_mode', 'kaikou')">{{ $t('room.settings.callModeKaikou') }}</button>
             </div>
           </div>
 
           <div class="setting-row">
-            <label>Turn Timer</label>
+            <label>{{ $t('room.settings.turnTimer') }}</label>
             <div class="segmented">
               <button v-for="v in [10, 15, 20, 30]" :key="v"
                 :class="{ active: editConfig.turn_timer === v }"
-                @click="setConfigValue('turn_timer', v as 10 | 15 | 20 | 30)">{{ v }}s</button>
+                @click="setConfigValue('turn_timer', v as 10 | 15 | 20 | 30)">{{ v }}{{ $t('room.settings.secondsSuffix') }}</button>
             </div>
           </div>
 
           <div class="setting-row">
-            <label>Reaction Timer</label>
+            <label>{{ $t('room.settings.reactionTimer') }}</label>
             <div class="segmented">
               <button v-for="v in [5, 8, 10, 15]" :key="v"
                 :class="{ active: editConfig.reaction_timer === v }"
-                @click="setConfigValue('reaction_timer', v as 5 | 8 | 10 | 15)">{{ v }}s</button>
+                @click="setConfigValue('reaction_timer', v as 5 | 8 | 10 | 15)">{{ v }}{{ $t('room.settings.secondsSuffix') }}</button>
             </div>
           </div>
 
           <div class="setting-row">
-            <label>Self-draw Only</label>
+            <label>{{ $t('room.settings.zimoOnly') }}</label>
             <button class="toggle" :class="{ on: editConfig.zimo_only }"
               @click="setConfigValue('zimo_only', !editConfig.zimo_only)">
               <span class="toggle-knob" />
@@ -219,7 +225,7 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
           </div>
 
           <div class="setting-row">
-            <label>Dealer Continues</label>
+            <label>{{ $t('room.settings.dealerContinuation') }}</label>
             <button class="toggle" :class="{ on: editConfig.dealer_continuation }"
               @click="setConfigValue('dealer_continuation', !editConfig.dealer_continuation)">
               <span class="toggle-knob" />
@@ -230,7 +236,7 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
 
       <div class="actions">
         <button class="btn-primary" @click="toggleReady">
-          Toggle Ready
+          {{ $t('room.toggleReady') }}
         </button>
         <button
           v-if="isHost"
@@ -238,10 +244,10 @@ function setConfigValue<K extends keyof RoomConfig>(key: K, value: RoomConfig[K]
           :disabled="!canStart"
           @click="startGame"
         >
-          Start Game
+          {{ $t('room.startGame') }}
         </button>
         <button class="btn-secondary" @click="handleLeave">
-          Leave
+          {{ $t('room.leave') }}
         </button>
       </div>
     </div>

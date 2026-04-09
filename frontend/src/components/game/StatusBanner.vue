@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../../stores/game'
 import { usePlayerName } from '../../composables/usePlayerName'
 
+const { t } = useI18n()
 const gameStore = useGameStore()
 const { playerName } = usePlayerName()
 
 const statusText = computed(() => {
   if (gameStore.isReacting) {
-    const name = playerName(gameStore.reactionFromSeat)
-    return `React to ${name}'s discard`
+    return t('game.status.reactTo', { name: playerName(gameStore.reactionFromSeat) })
   }
   if (gameStore.isMyTurn) {
-    return 'Your turn \u2014 discard a tile'
+    return t('game.status.yourTurn')
   }
   if (gameStore.currentTurnSeat >= 0) {
-    const name = playerName(gameStore.currentTurnSeat)
-    return `${name}'s turn`
+    return t('game.status.otherTurn', { name: playerName(gameStore.currentTurnSeat) })
   }
   return ''
 })

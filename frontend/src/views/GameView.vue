@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch, TransitionGroup } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import { useGameConnection } from '../composables/useGameConnection'
 import { usePlayerName } from '../composables/usePlayerName'
@@ -17,9 +18,19 @@ import MahjongTile from '../components/game/MahjongTile.vue'
 
 defineProps<{ code: string }>()
 
+const { t } = useI18n()
 const gameStore = useGameStore()
 const conn = useGameConnection()
 const { playerName } = usePlayerName()
+
+const meldLabelKeys: Record<string, string> = {
+  chi: 'game.meld.chi',
+  pong: 'game.meld.pong',
+  open_gang: 'game.meld.openGang',
+  closed_gang: 'game.meld.closedGang',
+  add_gang: 'game.meld.addGang',
+}
+const meldLabel = (type: string) => t(meldLabelKeys[type] ?? '')
 
 // Seat positions relative to current player (table orientation)
 const acrossSeat = computed(() => (gameStore.yourSeat + 2) % 4)
@@ -81,7 +92,7 @@ watch(() => gameStore.turnVersion, () => {
       </div>
       <TransitionGroup v-if="myMelds.length" name="meld" tag="div" class="self-melds">
         <div v-for="(meld, idx) in myMelds" :key="idx" class="self-meld">
-          <span class="meld-label">{{ { chi: '吃', pong: '碰', open_gang: '杠', closed_gang: '暗杠', add_gang: '补杠' }[meld.type] }}</span>
+          <span class="meld-label">{{ meldLabel(meld.type) }}</span>
           <div class="meld-tiles">
             <MahjongTile
               v-for="(tile, tidx) in meld.tiles"
@@ -103,7 +114,7 @@ watch(() => gameStore.turnVersion, () => {
         @pass="conn.declarePass()"
       />
       <div v-if="gameStore.waitingTiles.length > 0" class="tenpai-hint">
-        <span class="tenpai-label">听</span>
+        <span class="tenpai-label">{{ $t('game.tenpaiLabel') }}</span>
         <MahjongTile
           v-for="(tile, idx) in gameStore.waitingTiles"
           :key="idx"

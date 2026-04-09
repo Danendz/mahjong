@@ -75,7 +75,7 @@ function handleTileClick(tile: string) {
       </div>
     </div>
     <TransitionGroup name="drawn" tag="div" class="drawn-tile-area" v-if="gameStore.drawnTile && isMyTurn">
-      <span class="drawn-label" key="label">摸</span>
+      <span class="drawn-label" key="label">{{ $t('game.drawnLabel') }}</span>
       <MahjongTile
         :key="gameStore.drawnTile"
         :code="gameStore.drawnTile"

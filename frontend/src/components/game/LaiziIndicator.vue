@@ -7,17 +7,17 @@ const gameStore = useGameStore()
 
 <template>
   <div v-if="gameStore.laiziIndicator" class="laizi-indicator">
-    <div class="label">Laizi</div>
+    <div class="label">{{ $t('game.laizi.label') }}</div>
     <div class="tiles">
       <div class="indicator">
         <div class="tile-with-label">
           <MahjongTile :code="gameStore.laiziIndicator" small />
-          <span class="sub-label">翻</span>
+          <span class="sub-label">{{ $t('game.laizi.indicator') }}</span>
         </div>
         <span class="arrow">&rarr;</span>
         <div class="tile-with-label">
           <MahjongTile :code="gameStore.laiziTile!" is-laizi small />
-          <span class="sub-label wild">癞子</span>
+          <span class="sub-label wild">{{ $t('game.laizi.wild') }}</span>
         </div>
       </div>
     </div>

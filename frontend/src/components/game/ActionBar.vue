@@ -46,24 +46,29 @@ function handleGang() {
     <!-- Reaction buttons -->
     <template v-if="showReactions">
       <button v-if="hasHu" class="btn-action hu" @click="$emit('hu')">
-        <span class="action-cn">胡</span>
-        <span class="action-en">Win{{ gameStore.huScorePreview ? ` (${gameStore.huScorePreview}pts)` : '' }}</span>
+        <span class="action-cn">{{ $t('game.action.hu') }}</span>
+        <span v-if="$t('game.action.huSub')" class="action-en">
+          {{ $t('game.action.huSub') }}<template v-if="gameStore.huScorePreview"> ({{ $t('game.action.huScorePreview', { points: gameStore.huScorePreview }) }})</template>
+        </span>
+        <span v-else-if="gameStore.huScorePreview" class="action-en">
+          {{ $t('game.action.huScorePreview', { points: gameStore.huScorePreview }) }}
+        </span>
       </button>
       <button v-if="hasGang" class="btn-action gang" @click="handleGang">
-        <span class="action-cn">杠</span>
-        <span class="action-en">Kong</span>
+        <span class="action-cn">{{ $t('game.action.gang') }}</span>
+        <span v-if="$t('game.action.gangSub')" class="action-en">{{ $t('game.action.gangSub') }}</span>
       </button>
       <button v-if="hasPong" class="btn-action pong" @click="$emit('pong')">
-        <span class="action-cn">碰</span>
-        <span class="action-en">Pong</span>
+        <span class="action-cn">{{ $t('game.action.pong') }}</span>
+        <span v-if="$t('game.action.pongSub')" class="action-en">{{ $t('game.action.pongSub') }}</span>
       </button>
       <button v-if="hasChi && !showChiOptions" class="btn-action chi" @click="showChiOptions = gameStore.chiOptions.length > 1 ? true : false; if (gameStore.chiOptions.length === 1) handleChi(gameStore.chiOptions[0] as [string, string])">
-        <span class="action-cn">吃</span>
-        <span class="action-en">Chi</span>
+        <span class="action-cn">{{ $t('game.action.chi') }}</span>
+        <span v-if="$t('game.action.chiSub')" class="action-en">{{ $t('game.action.chiSub') }}</span>
       </button>
       <button class="btn-action pass" @click="$emit('pass')">
-        <span class="action-cn">过</span>
-        <span class="action-en">Pass</span>
+        <span class="action-cn">{{ $t('game.action.pass') }}</span>
+        <span v-if="$t('game.action.passSub')" class="action-en">{{ $t('game.action.passSub') }}</span>
       </button>
     </template>
 
@@ -78,19 +83,24 @@ function handleGang() {
         {{ opt[0] }} + {{ opt[1] }}
       </button>
       <button class="btn-action pass" @click="showChiOptions = false">
-        Cancel
+        {{ $t('common.cancel') }}
       </button>
     </div>
 
     <!-- Turn actions (kong, hu on self-draw) -->
     <template v-if="showTurnActions && !showReactions">
       <button v-if="gameStore.canHu" class="btn-action hu" @click="$emit('hu')">
-        <span class="action-cn">自摸</span>
-        <span class="action-en">Zimo{{ gameStore.huScorePreview ? ` (${gameStore.huScorePreview}pts)` : '' }}</span>
+        <span class="action-cn">{{ $t('game.action.zimo') }}</span>
+        <span v-if="$t('game.action.zimoSub')" class="action-en">
+          {{ $t('game.action.zimoSub') }}<template v-if="gameStore.huScorePreview"> ({{ $t('game.action.huScorePreview', { points: gameStore.huScorePreview }) }})</template>
+        </span>
+        <span v-else-if="gameStore.huScorePreview" class="action-en">
+          {{ $t('game.action.huScorePreview', { points: gameStore.huScorePreview }) }}
+        </span>
       </button>
       <button v-if="(gameStore.canGang?.length ?? 0) > 0" class="btn-action gang" @click="handleGang">
-        <span class="action-cn">杠</span>
-        <span class="action-en">Kong</span>
+        <span class="action-cn">{{ $t('game.action.gang') }}</span>
+        <span v-if="$t('game.action.gangSub')" class="action-en">{{ $t('game.action.gangSub') }}</span>
       </button>
     </template>
   </div>

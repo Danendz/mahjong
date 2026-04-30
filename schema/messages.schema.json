@@ -232,6 +232,7 @@
       "properties": {
         "type": { "const": "your_turn" },
         "drawn_tile": { "$ref": "tiles.schema.json#/definitions/TileCode" },
+        "your_hand": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" }, "description": "Player's full closed hand including the drawn tile (re-syncs after melds remove tiles)" },
         "time_limit": { "type": "integer" },
         "wall_remaining": { "type": "integer" },
         "can_gang": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } },
@@ -291,9 +292,10 @@
         "type": { "const": "round_end" },
         "result": { "type": "string", "enum": ["hu", "draw"] },
         "winner_seat": { "type": ["integer", "null"] },
-        "winning_hand": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" } },
+        "winning_hand": { "type": "array", "items": { "$ref": "tiles.schema.json#/definitions/TileCode" }, "description": "Full closed hand including the winning tile" },
         "winning_tile": { "$ref": "tiles.schema.json#/definitions/TileCode" },
         "win_type": { "type": "string", "enum": ["self_draw", "discard", "rob_kong"] },
+        "open_melds": { "type": "object", "additionalProperties": { "type": "array", "items": { "$ref": "#/definitions/MeldInfo" } }, "description": "Winner's melds so the client can render the full reconstruction" },
         "scoring": { "$ref": "#/definitions/ScoringBreakdown" },
         "score_deltas": { "type": "object", "additionalProperties": { "type": "integer" } },
         "total_scores": { "type": "object", "additionalProperties": { "type": "integer" } }

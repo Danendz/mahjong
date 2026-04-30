@@ -146,6 +146,7 @@ export interface GameStartedMsg {
 export interface YourTurnMsg {
   type: 'your_turn'
   drawn_tile: TileCode
+  your_hand?: TileCode[]
   time_limit: number
   wall_remaining: number
   can_gang: TileCode[]
@@ -195,6 +196,7 @@ export interface RoundEndMsg {
   winning_hand?: TileCode[]
   winning_tile?: TileCode
   win_type?: 'self_draw' | 'discard' | 'rob_kong'
+  open_melds?: Record<string, MeldInfo[]>
   scoring?: ScoringBreakdown
   score_deltas: Record<string, number>
   total_scores: Record<string, number>

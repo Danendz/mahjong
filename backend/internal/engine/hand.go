@@ -9,17 +9,25 @@ import (
 
 // HandAnalysis holds the result of analyzing a hand for winning.
 type HandAnalysis struct {
-	IsWin       bool
-	IsHardHu    bool   // laizi used as its natural tile (硬胡)
-	UsesLaizi   bool   // laizi used as substitute (软胡)
-	LaiziAsNatural int // how many laizi used as their own tile code
+	IsWin          bool
+	IsHardHu       bool // laizi used as its natural tile (硬胡)
+	UsesLaizi      bool // laizi used as substitute (软胡)
+	LaiziAsNatural int  // how many laizi used as their own tile code
 }
 
-// IsWinningHand checks if a hand of 14 tiles (including melds counted as part of the hand)
-// forms a valid winning hand: 4 sets + 1 pair, where the pair must be 258.
-// laiziTile is the current laizi code; laizi tiles in hand can substitute for anything.
-func IsWinningHand(hand []models.TileCode, laiziTile models.TileCode) HandAnalysis {
-	regular, laiziCount := SeparateLaizi(hand, laiziTile)
+// IsWinningHand checks if the player's closed hand together with their existing
+// melds forms a valid winning hand: 4 sets total + 1 pair, where the pair must be 258.
+// Each meld in `melds` (chi/pong/open_gang/closed_gang/add_gang) counts as one
+// already-formed set; the closed hand needs to provide the remaining sets and the pair.
+// laiziTile is the current laizi code; laizi tiles in the closed hand can substitute for anything.
+func IsWinningHand(closedHand []models.TileCode, melds []models.MeldInfo, laiziTile models.TileCode) HandAnalysis {
+	requiredSets := 4 - len(melds)
+	if requiredSets < 0 {
+		// Defensive: more than 4 melds shouldn't happen in legal play
+		return HandAnalysis{IsWin: false}
+	}
+
+	regular, laiziCount := SeparateLaizi(closedHand, laiziTile)
 
 	// Try 硬胡 first: use laizi as their natural tile value (gives 2x multiplier)
 	if laiziCount > 0 {
@@ -28,7 +36,7 @@ func IsWinningHand(hand []models.TileCode, laiziTile models.TileCode) HandAnalys
 		for range laiziCount {
 			hardHand = append(hardHand, laiziTile)
 		}
-		if canFormWin(hardHand, 0) {
+		if canFormWin(hardHand, 0, requiredSets) {
 			return HandAnalysis{
 				IsWin:          true,
 				IsHardHu:       true,
@@ -39,7 +47,7 @@ func IsWinningHand(hand []models.TileCode, laiziTile models.TileCode) HandAnalys
 	}
 
 	// Try 软胡: use laizi as wildcards (substitutes)
-	if canFormWin(regular, laiziCount) {
+	if canFormWin(regular, laiziCount, requiredSets) {
 		return HandAnalysis{
 			IsWin:     true,
 			UsesLaizi: laiziCount > 0,
@@ -50,17 +58,17 @@ func IsWinningHand(hand []models.TileCode, laiziTile models.TileCode) HandAnalys
 	return HandAnalysis{IsWin: false}
 }
 
-// canFormWin checks if regular tiles + wildcardCount wildcards can form 4 sets + 1 pair
-// with a valid 258 pair.
-func canFormWin(regular []models.TileCode, wildcards int) bool {
+// canFormWin checks if regular tiles + wildcardCount wildcards can form `requiredSets`
+// sets + 1 pair with a valid 258 pair.
+func canFormWin(regular []models.TileCode, wildcards int, requiredSets int) bool {
 	freq := TileCodesToMap(regular)
-	return tryFormSets(freq, wildcards, 0, false)
+	return tryFormSets(freq, wildcards, 0, false, requiredSets)
 }
 
-// tryFormSets recursively tries to form 4 sets + 1 pair.
+// tryFormSets recursively tries to form `requiredSets` sets + 1 pair.
 // It iterates through tiles in sorted order, trying to form a pair first,
 // then triplets and sequences.
-func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pairUsed bool) bool {
+func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pairUsed bool, requiredSets int) bool {
 	// Check if we've formed enough sets
 	totalTiles := 0
 	for _, c := range freq {
@@ -68,17 +76,17 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 	}
 	totalTiles += wildcards
 
-	if totalTiles == 0 && setsFormed == 4 && pairUsed {
+	if totalTiles == 0 && setsFormed == requiredSets && pairUsed {
 		return true
 	}
-	if setsFormed > 4 {
+	if setsFormed > requiredSets {
 		return false
 	}
 
 	// Find the smallest tile that has count > 0
 	smallest := findSmallestTile(freq)
 	if smallest == "" && wildcards == 0 {
-		return pairUsed && setsFormed == 4
+		return pairUsed && setsFormed == requiredSets
 	}
 
 	// If only wildcards remain, check if they can fill remaining needs
@@ -87,7 +95,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 		if !pairUsed {
 			needed += 2
 		}
-		needed += (4 - setsFormed) * 3
+		needed += (requiredSets - setsFormed) * 3
 		return wildcards >= needed
 	}
 
@@ -97,7 +105,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 			// Pair with 2 of this tile
 			if freq[smallest] >= 2 {
 				freq[smallest] -= 2
-				if tryFormSets(freq, wildcards, setsFormed, true) {
+				if tryFormSets(freq, wildcards, setsFormed, true, requiredSets) {
 					freq[smallest] += 2
 					return true
 				}
@@ -107,7 +115,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 			// Pair with 1 of this tile + 1 wildcard
 			if freq[smallest] >= 1 && wildcards >= 1 {
 				freq[smallest]--
-				if tryFormSets(freq, wildcards-1, setsFormed, true) {
+				if tryFormSets(freq, wildcards-1, setsFormed, true, requiredSets) {
 					freq[smallest]++
 					return true
 				}
@@ -119,7 +127,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 		if wildcards >= 2 {
 			// Try each valid 258 pair that isn't in freq
 			for _, pair := range models.Valid258Pairs {
-				if tryFormSets(freq, wildcards-2, setsFormed, true) {
+				if tryFormSets(freq, wildcards-2, setsFormed, true, requiredSets) {
 					_ = pair
 					return true
 				}
@@ -131,7 +139,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 	// Try using this tile in a triplet (刻子)
 	if freq[smallest] >= 3 {
 		freq[smallest] -= 3
-		if tryFormSets(freq, wildcards, setsFormed+1, pairUsed) {
+		if tryFormSets(freq, wildcards, setsFormed+1, pairUsed, requiredSets) {
 			freq[smallest] += 3
 			return true
 		}
@@ -141,7 +149,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 	// Triplet with wildcards
 	if freq[smallest] >= 2 && wildcards >= 1 {
 		freq[smallest] -= 2
-		if tryFormSets(freq, wildcards-1, setsFormed+1, pairUsed) {
+		if tryFormSets(freq, wildcards-1, setsFormed+1, pairUsed, requiredSets) {
 			freq[smallest] += 2
 			return true
 		}
@@ -149,7 +157,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 	}
 	if freq[smallest] >= 1 && wildcards >= 2 {
 		freq[smallest]--
-		if tryFormSets(freq, wildcards-2, setsFormed+1, pairUsed) {
+		if tryFormSets(freq, wildcards-2, setsFormed+1, pairUsed, requiredSets) {
 			freq[smallest]++
 			return true
 		}
@@ -170,7 +178,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 				freq[smallest]--
 				freq[next1]--
 				freq[next2]--
-				if tryFormSets(freq, wildcards, setsFormed+1, pairUsed) {
+				if tryFormSets(freq, wildcards, setsFormed+1, pairUsed, requiredSets) {
 					freq[smallest]++
 					freq[next1]++
 					freq[next2]++
@@ -187,7 +195,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 				if freq[next1] > 0 {
 					freq[smallest]--
 					freq[next1]--
-					if tryFormSets(freq, wildcards-1, setsFormed+1, pairUsed) {
+					if tryFormSets(freq, wildcards-1, setsFormed+1, pairUsed, requiredSets) {
 						freq[smallest]++
 						freq[next1]++
 						return true
@@ -199,7 +207,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 				if freq[next2] > 0 {
 					freq[smallest]--
 					freq[next2]--
-					if tryFormSets(freq, wildcards-1, setsFormed+1, pairUsed) {
+					if tryFormSets(freq, wildcards-1, setsFormed+1, pairUsed, requiredSets) {
 						freq[smallest]++
 						freq[next2]++
 						return true
@@ -212,7 +220,7 @@ func tryFormSets(freq map[models.TileCode]int, wildcards int, setsFormed int, pa
 			// 1 tile + 2 wildcards
 			if wildcards >= 2 {
 				freq[smallest]--
-				if tryFormSets(freq, wildcards-2, setsFormed+1, pairUsed) {
+				if tryFormSets(freq, wildcards-2, setsFormed+1, pairUsed, requiredSets) {
 					freq[smallest]++
 					return true
 				}
@@ -360,22 +368,23 @@ func FindAddGangs(hand []models.TileCode, melds []models.MeldInfo) []models.Tile
 	return gangs
 }
 
-// CanWinWithTile checks if adding a tile to a 13-tile hand results in a win.
-func CanWinWithTile(hand []models.TileCode, tile models.TileCode, laiziTile models.TileCode) HandAnalysis {
-	fullHand := make([]models.TileCode, len(hand), len(hand)+1)
-	copy(fullHand, hand)
+// CanWinWithTile checks if adding `tile` to the closed hand (combined with existing melds)
+// results in a winning hand.
+func CanWinWithTile(closedHand []models.TileCode, tile models.TileCode, melds []models.MeldInfo, laiziTile models.TileCode) HandAnalysis {
+	fullHand := make([]models.TileCode, len(closedHand), len(closedHand)+1)
+	copy(fullHand, closedHand)
 	fullHand = append(fullHand, tile)
-	return IsWinningHand(fullHand, laiziTile)
+	return IsWinningHand(fullHand, melds, laiziTile)
 }
 
-// FindWinningDiscards returns all tiles that, if drawn, would complete the hand.
-func FindWinningDiscards(hand []models.TileCode, laiziTile models.TileCode) []models.TileCode {
+// FindWinningDiscards returns all tiles that, if drawn, would complete the hand,
+// accounting for any existing melds.
+func FindWinningDiscards(closedHand []models.TileCode, melds []models.MeldInfo, laiziTile models.TileCode) []models.TileCode {
 	var winning []models.TileCode
 	for _, code := range models.AllTileCodes {
-		if CanWinWithTile(hand, code, laiziTile).IsWin {
+		if CanWinWithTile(closedHand, code, melds, laiziTile).IsWin {
 			winning = append(winning, code)
 		}
 	}
 	return winning
 }
-

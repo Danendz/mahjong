@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../../stores/game'
 import { usePlayerName } from '../../composables/usePlayerName'
 import MahjongTile from './MahjongTile.vue'
+import MeldCard from './MeldCard.vue'
 
 const gameStore = useGameStore()
 const { playerName } = usePlayerName()
+const { t, te } = useI18n()
 
 // Next round countdown
 const countdown = ref(30)
@@ -44,6 +47,23 @@ const rankedScores = computed(() => {
       color: rankColors[idx] ?? '#666',
     }))
 })
+
+// Winner's melds — prefer the open_melds field on round_end (server snapshot at win),
+// fall back to whatever the store accumulated during play.
+const winnerMelds = computed(() => {
+  const result = gameStore.roundResult
+  if (!result || result.winner_seat == null) return []
+  const seatKey = String(result.winner_seat)
+  return result.open_melds?.[seatKey] ?? gameStore.openMelds[seatKey] ?? []
+})
+
+const winningTile = computed(() => gameStore.roundResult?.winning_tile ?? null)
+
+// Translate a scoring multiplier reason. Falls back to the raw key if no translation.
+function reasonLabel(reason: string): string {
+  const key = `scoring.multipliers.${reason}`
+  return te(key) ? t(key) : reason
+}
 </script>
 
 <template>
@@ -54,14 +74,27 @@ const rankedScores = computed(() => {
       </h2>
       <h2 v-else>{{ $t('scoring.draw') }}</h2>
 
-      <div v-if="gameStore.roundResult.winning_hand" class="winning-hand">
-        <MahjongTile
-          v-for="(tile, idx) in gameStore.roundResult.winning_hand"
-          :key="idx"
-          :code="tile"
-          :is-laizi="tile === gameStore.laiziTile"
+      <div v-if="gameStore.roundResult.winning_hand" class="winning-reconstruction">
+        <MeldCard
+          v-for="(meld, idx) in winnerMelds"
+          :key="`m-${idx}`"
+          :type="meld.type"
+          :tiles="meld.tiles"
+          :laizi-tile="gameStore.laiziTile"
+          :show-label="true"
           small
         />
+        <div v-if="gameStore.roundResult.winning_hand.length" class="closed-hand">
+          <MahjongTile
+            v-for="(tile, idx) in gameStore.roundResult.winning_hand"
+            :key="`h-${idx}`"
+            :code="tile"
+            :is-laizi="tile === gameStore.laiziTile"
+            :contested="!!winningTile && tile === winningTile && idx === gameStore.roundResult.winning_hand.lastIndexOf(winningTile)"
+            contested-color="#f0a500"
+            small
+          />
+        </div>
       </div>
 
       <div v-if="gameStore.roundResult.scoring" class="scoring">
@@ -73,7 +106,7 @@ const rankedScores = computed(() => {
           :key="idx"
           class="score-line"
         >
-          {{ mult.reason }}: x{{ mult.value }}
+          {{ reasonLabel(mult.reason) }}: x{{ mult.value }}
         </div>
         <div class="score-total">
           {{ $t('scoring.perLoser', { amount: gameStore.roundResult.scoring.total_per_loser }) }}
@@ -122,6 +155,7 @@ const rankedScores = computed(() => {
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: $spacing-md;
 }
 
 .overlay-card {
@@ -129,9 +163,11 @@ const rankedScores = computed(() => {
   border: 1px solid $color-border;
   border-radius: $border-radius;
   padding: $spacing-xl;
-  max-width: 450px;
-  width: 90%;
+  max-width: 540px;
+  width: 100%;
   text-align: center;
+  max-height: 90vh;
+  overflow-y: auto;
 
   h2 {
     margin-bottom: $spacing-lg;
@@ -139,12 +175,20 @@ const rankedScores = computed(() => {
   }
 }
 
-.winning-hand {
+.winning-reconstruction {
   display: flex;
-  justify-content: center;
   flex-wrap: wrap;
-  gap: 2px;
+  justify-content: center;
+  align-items: flex-end;
+  gap: $spacing-sm;
   margin-bottom: $spacing-lg;
+  padding-top: 8px;  // room for meld badge
+}
+
+.closed-hand {
+  display: flex;
+  gap: 1px;
+  align-items: flex-end;
 }
 
 .scoring {

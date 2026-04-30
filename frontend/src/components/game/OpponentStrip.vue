@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../../stores/game'
 import { useRoomStore } from '../../stores/room'
-import MahjongTile from './MahjongTile.vue'
+import MeldCard from './MeldCard.vue'
 
 const props = defineProps<{
   seat: number
@@ -36,16 +36,15 @@ const positionLabel = computed(() => t(`game.opponent.${positionKeys[props.posit
     </div>
 
     <div v-if="melds.length" class="melds">
-      <div v-for="(meld, idx) in melds" :key="idx" class="meld">
-        <MahjongTile
-          v-for="(tile, tidx) in meld.tiles"
-          :key="tidx"
-          :code="tile"
-          :is-laizi="tile === gameStore.laiziTile"
-          :face-down="meld.type === 'closed_gang'"
-          small
-        />
-      </div>
+      <MeldCard
+        v-for="(meld, idx) in melds"
+        :key="idx"
+        :type="meld.type"
+        :tiles="meld.tiles"
+        :laizi-tile="gameStore.laiziTile"
+        :show-label="false"
+        small
+      />
     </div>
   </div>
 </template>
@@ -114,10 +113,6 @@ const positionLabel = computed(() => t(`game.opponent.${positionKeys[props.posit
   display: flex;
   gap: $spacing-sm;
   flex-wrap: wrap;
-}
-
-.meld {
-  display: flex;
-  gap: 1px;
+  padding-top: 4px;
 }
 </style>

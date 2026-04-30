@@ -38,6 +38,19 @@ export const useGameStore = defineStore('game', () => {
   const chiOptions = ref<[TileCode, TileCode][]>([])
   const reactionTimeLimit = ref(0)
 
+  // Tracks the reaction we just submitted to the server so we can detect
+  // priority preemption: if action_resolved arrives for a different seat
+  // (or round_end fires) before ours, we know the action was dropped.
+  type PendingReactionType = 'chi' | 'pong' | 'gang' | 'hu'
+  const pendingReaction = ref<PendingReactionType | null>(null)
+
+  function setPendingReaction(type: PendingReactionType) {
+    pendingReaction.value = type
+  }
+  function clearPendingReaction() {
+    pendingReaction.value = null
+  }
+
   // Round end
   const roundResult = ref<RoundEndMsg | null>(null)
   const isRoundEnd = ref(false)
@@ -76,9 +89,14 @@ export const useGameStore = defineStore('game', () => {
 
   function handleYourTurn(msg: YourTurnMsg) {
     drawnTile.value = msg.drawn_tile ?? null
-    if (msg.drawn_tile) {
+    if (msg.your_hand) {
+      // Server sent authoritative hand — replace ours (handles drift after melds)
+      hand.value = [...msg.your_hand]
+      const key = String(yourSeat.value)
+      tileCounts.value[key] = msg.your_hand.length
+    } else if (msg.drawn_tile) {
+      // Fallback for older servers: just append the drawn tile
       hand.value.push(msg.drawn_tile)
-      // Increment own tile count for the draw
       const key = String(yourSeat.value)
       tileCounts.value[key] = (tileCounts.value[key] || 13) + 1
     }
@@ -128,11 +146,37 @@ export const useGameStore = defineStore('game', () => {
     const key = String(seat)
     if (!openMelds.value[key]) openMelds.value[key] = []
 
-    if (action === 'pong' || action === 'chi' || action === 'gang') {
-      openMelds.value[key].push({
-        type: action === 'gang' ? 'open_gang' : action as MeldInfo['type'],
-        tiles: tilesRevealed,
-      })
+    switch (action) {
+      case 'chi':
+      case 'pong':
+      case 'open_gang':
+      case 'closed_gang':
+        openMelds.value[key].push({
+          type: action as MeldInfo['type'],
+          tiles: tilesRevealed,
+        })
+        break
+      case 'add_gang': {
+        // Upgrade an existing pong to add_gang in place; otherwise append.
+        const target = tilesRevealed[0]
+        const idx = openMelds.value[key].findIndex(
+          m => m.type === 'pong' && m.tiles[0] === target,
+        )
+        const upgraded: MeldInfo = { type: 'add_gang', tiles: tilesRevealed }
+        if (idx >= 0) {
+          openMelds.value[key][idx] = upgraded
+        } else {
+          openMelds.value[key].push(upgraded)
+        }
+        break
+      }
+      // Legacy 'gang' string mapped to open_gang for older servers
+      case 'gang':
+        openMelds.value[key].push({
+          type: 'open_gang',
+          tiles: tilesRevealed,
+        })
+        break
     }
 
     currentTurnSeat.value = nextTurnSeat
@@ -199,6 +243,7 @@ export const useGameStore = defineStore('game', () => {
     isRoundEnd.value = false
     disconnectedSeats.value.clear()
     turnVersion.value = 0
+    pendingReaction.value = null
   }
 
   return {
@@ -207,11 +252,13 @@ export const useGameStore = defineStore('game', () => {
     openMelds, discards, tileCounts, scores,
     canGang, canHu, timeLimit, huScorePreview, waitingTiles,
     reactionTile, reactionFromSeat, availableActions, chiOptions, reactionTimeLimit,
+    pendingReaction,
     roundResult, isRoundEnd, disconnectedSeats,
     isMyTurn, isReacting,
     handleGameStarted, handleYourTurn, handleTileDiscarded,
     handleReactionPrompt, handleActionResolved, handleRoundEnd,
     handleGameState, discardTile, clearReaction,
+    setPendingReaction, clearPendingReaction,
     setDisconnected, setReconnected, $reset,
   }
 })

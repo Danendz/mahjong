@@ -1,7 +1,10 @@
 import { useWebSocket } from './useWebSocket'
+import { useToast } from './useToast'
 import { useUserStore } from '../stores/user'
 import { useRoomStore } from '../stores/room'
 import { useGameStore } from '../stores/game'
+import { usePlayerName } from './usePlayerName'
+import { i18n } from '../i18n'
 import type { ServerMessage, ClientMessage, BotDifficulty, RoomConfig } from '../types/generated'
 
 let initialized = false
@@ -12,6 +15,22 @@ export function useGameConnection() {
   const userStore = useUserStore()
   const roomStore = useRoomStore()
   const gameStore = useGameStore()
+  const toast = useToast()
+  const { playerName } = usePlayerName()
+
+  // Show a toast when our pending reaction was beaten by a higher-priority
+  // action (or by hu ending the round). Caller passes the winning seat and
+  // their action; we look up the pending reaction type from the store.
+  function notifyPreempted(winningSeat: number, winningAction: string) {
+    const pending = gameStore.pendingReaction
+    if (!pending) return
+    const t = i18n.global.t
+    const name = playerName(winningSeat)
+    const their = t(`game.actionShort.${winningAction}`, winningAction)
+    const yours = t(`game.actionShort.${pending}`, pending)
+    toast.show(t('game.preempted', { name, their, yours }), 'warn')
+    gameStore.clearPendingReaction()
+  }
 
   function init() {
     if (initialized) return
@@ -78,6 +97,9 @@ export function useGameConnection() {
           break
 
         case 'reaction_prompt':
+          // A new reaction round started — any pending reaction from the
+          // previous discard is moot now. Clear silently.
+          gameStore.clearPendingReaction()
           gameStore.handleReactionPrompt(
             msg.tile!,
             msg.from_seat!,
@@ -88,17 +110,31 @@ export function useGameConnection() {
           )
           break
 
-        case 'action_resolved':
+        case 'action_resolved': {
+          const winningSeat = msg.seat!
+          if (gameStore.pendingReaction) {
+            if (winningSeat === gameStore.yourSeat) {
+              gameStore.clearPendingReaction()
+            } else {
+              notifyPreempted(winningSeat, msg.action!)
+            }
+          }
           gameStore.handleActionResolved(
-            msg.seat!, msg.action!, msg.tiles_revealed!, msg.next_turn_seat!,
+            winningSeat, msg.action!, msg.tiles_revealed!, msg.next_turn_seat!,
           )
           break
+        }
 
         case 'gang_result':
           // Handled via action_resolved or game_state
           break
 
         case 'round_end':
+          if (gameStore.pendingReaction && msg.winner_seat != null && msg.winner_seat !== gameStore.yourSeat) {
+            notifyPreempted(msg.winner_seat, 'hu')
+          } else {
+            gameStore.clearPendingReaction()
+          }
           gameStore.handleRoundEnd(msg as any)
           break
 
@@ -177,21 +213,29 @@ export function useGameConnection() {
   }
 
   function declarePong() {
+    gameStore.setPendingReaction('pong')
     gameStore.clearReaction()
     send({ type: 'pong' })
   }
 
   function declareChi(tiles: [string, string]) {
+    gameStore.setPendingReaction('chi')
     gameStore.clearReaction()
     send({ type: 'chi', tiles: tiles as any })
   }
 
   function declareGang(gangType: 'open' | 'closed' | 'add', tile: string) {
+    // Only open gang (reaction phase) competes with other players' priorities.
+    // Closed/add gang happens on your own turn — no preemption possible.
+    if (gangType === 'open') {
+      gameStore.setPendingReaction('gang')
+    }
     gameStore.clearReaction()
     send({ type: 'gang', gang_type: gangType, tile: tile as any })
   }
 
   function declareHu() {
+    gameStore.setPendingReaction('hu')
     gameStore.clearReaction()
     send({ type: 'hu' })
   }

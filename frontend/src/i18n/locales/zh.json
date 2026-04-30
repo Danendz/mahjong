@@ -94,6 +94,13 @@
     },
     "drawnLabel": "摸",
     "tenpaiLabel": "听",
+    "preempted": "{name}的{their}抢先了你的{yours}",
+    "actionShort": {
+      "chi": "吃",
+      "pong": "碰",
+      "gang": "杠",
+      "hu": "胡"
+    },
     "laizi": {
       "label": "癞子",
       "indicator": "翻",
@@ -123,7 +130,22 @@
     "delta": "{name}: {delta}",
     "rankedScore": "{name}: {score}",
     "nextRoundIn": "{countdown}秒后开始下一局...",
-    "starting": "开始中..."
+    "starting": "开始中...",
+    "winningTileLabel": "胡牌",
+    "multipliers": {
+      "self_draw": "自摸",
+      "hard_hu": "硬胡",
+      "kong_draw": "杠上花",
+      "rob_kong": "抢杠胡",
+      "last_tile": "海底捞",
+      "open_call": "开口翻",
+      "peng_peng_hu": "碰碰胡",
+      "qing_yi_se": "清一色",
+      "gang_shang_kai_hua": "杠上开花",
+      "qiang_gang_hu": "抢杠胡",
+      "hai_di_lao_yue": "海底捞月",
+      "qi_dui": "七对"
+    }
   },
   "connection": {
     "connecting": "连接中...",

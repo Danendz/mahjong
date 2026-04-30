@@ -20,6 +20,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: dev
     ports:
       - "8080:8080"
     environment:
@@ -30,7 +31,6 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: air -c .air.toml
 
 volumes:
   pgdata:

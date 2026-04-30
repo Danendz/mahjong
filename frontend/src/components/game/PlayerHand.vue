@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, TransitionGroup } from 'vue'
+import { computed, Transition } from 'vue'
 import { useGameStore } from '../../stores/game'
 import MahjongTile from './MahjongTile.vue'
 
@@ -73,17 +73,22 @@ function handleTileClick(tile: string) {
           @click="handleTileClick(tile)"
         />
       </div>
+      <Transition name="drawn">
+        <div
+          v-if="gameStore.drawnTile && isMyTurn"
+          :key="gameStore.drawnTile"
+          class="drawn-tile-area"
+        >
+          <span class="drawn-label">{{ $t('game.drawnLabel') }}</span>
+          <MahjongTile
+            :code="gameStore.drawnTile"
+            :is-laizi="gameStore.drawnTile === gameStore.laiziTile"
+            :clickable="isMyTurn"
+            @click="handleTileClick(gameStore.drawnTile!)"
+          />
+        </div>
+      </Transition>
     </div>
-    <TransitionGroup name="drawn" tag="div" class="drawn-tile-area" v-if="gameStore.drawnTile && isMyTurn">
-      <span class="drawn-label" key="label">{{ $t('game.drawnLabel') }}</span>
-      <MahjongTile
-        :key="gameStore.drawnTile"
-        :code="gameStore.drawnTile"
-        :is-laizi="gameStore.drawnTile === gameStore.laiziTile"
-        :clickable="isMyTurn"
-        @click="handleTileClick(gameStore.drawnTile!)"
-      />
-    </TransitionGroup>
   </div>
 </template>
 
@@ -93,9 +98,7 @@ function handleTileClick(tile: string) {
 .player-hand {
   display: flex;
   justify-content: center;
-  align-items: flex-end;
   padding: $spacing-sm 0;
-  gap: $spacing-md;
 }
 
 .tiles {
@@ -103,11 +106,14 @@ function handleTileClick(tile: string) {
   gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: flex-end;
+  row-gap: 8px;
 }
 
 .tile-group {
   display: flex;
   gap: 2px;
+  align-items: flex-end;
 }
 
 .drawn-tile-area {
@@ -115,6 +121,8 @@ function handleTileClick(tile: string) {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  // Slight gap from the last suit group so the drawn tile reads as separate
+  margin-left: $spacing-sm;
 }
 
 .drawn-label {

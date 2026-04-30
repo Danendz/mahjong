@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useGameConnection } from './composables/useGameConnection'
 import ConnectionStatus from './components/ConnectionStatus.vue'
+import Toasts from './components/Toasts.vue'
 
 const { init } = useGameConnection()
 
@@ -14,6 +15,7 @@ onMounted(() => {
   <div class="app">
     <ConnectionStatus />
     <router-view />
+    <Toasts />
   </div>
 </template>
 

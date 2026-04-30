@@ -45,7 +45,7 @@ func (s *HardStrategy) ChooseTurnAction(ctx GameContext) TurnAction {
 		}
 
 		remaining := removeTile(hand, candidate)
-		outs := len(engine.FindWinningDiscards(remaining, ctx.LaiziTile))
+		outs := len(engine.FindWinningDiscards(remaining, ctx.Melds, ctx.LaiziTile))
 
 		// Count how "safe" this discard is (tiles already visible = less likely to be needed by others)
 		safe := visible[candidate]
@@ -86,8 +86,12 @@ func (s *HardStrategy) ChooseReaction(ctx GameContext) ReactionAction {
 		if action == "pong" {
 			// Simulate pong: remove 2 matching tiles, evaluate remaining hand
 			afterPong := removeTileN(hand, ctx.DiscardedTile, 2)
-			outsBefore := len(engine.FindWinningDiscards(hand, ctx.LaiziTile))
-			outsAfter := len(engine.FindWinningDiscards(afterPong, ctx.LaiziTile))
+			meldsAfter := append(append([]models.MeldInfo{}, ctx.Melds...), models.MeldInfo{
+				Type:  models.MeldPong,
+				Tiles: []models.TileCode{ctx.DiscardedTile, ctx.DiscardedTile, ctx.DiscardedTile},
+			})
+			outsBefore := len(engine.FindWinningDiscards(hand, ctx.Melds, ctx.LaiziTile))
+			outsAfter := len(engine.FindWinningDiscards(afterPong, meldsAfter, ctx.LaiziTile))
 			if outsAfter >= outsBefore {
 				return ReactionAction{Type: "pong"}
 			}
@@ -99,8 +103,12 @@ func (s *HardStrategy) ChooseReaction(ctx GameContext) ReactionAction {
 			// Try the first chi option
 			opt := ctx.ChiOptions[0]
 			afterChi := removeTile(removeTile(hand, opt[0]), opt[1])
-			outsBefore := len(engine.FindWinningDiscards(hand, ctx.LaiziTile))
-			outsAfter := len(engine.FindWinningDiscards(afterChi, ctx.LaiziTile))
+			meldsAfter := append(append([]models.MeldInfo{}, ctx.Melds...), models.MeldInfo{
+				Type:  models.MeldChi,
+				Tiles: []models.TileCode{opt[0], opt[1], ctx.DiscardedTile},
+			})
+			outsBefore := len(engine.FindWinningDiscards(hand, ctx.Melds, ctx.LaiziTile))
+			outsAfter := len(engine.FindWinningDiscards(afterChi, meldsAfter, ctx.LaiziTile))
 			if outsAfter >= outsBefore {
 				return ReactionAction{Type: "chi", ChiTiles: opt}
 			}

@@ -355,7 +355,7 @@ func (g *Game) DeclareAddKong(seat int, tile models.TileCode) error {
 		if s == seat {
 			continue
 		}
-		if CanWinWithTile(g.Players[s].Hand, tile, g.LaiziTile).IsWin {
+		if CanWinWithTile(g.Players[s].Hand, tile, g.Players[s].Melds, g.LaiziTile).IsWin {
 			g.ReactionsNeeded[s] = true
 			hasRob = true
 		}
@@ -393,7 +393,7 @@ func (g *Game) DeclareSelfDrawWin(seat int) error {
 	}
 
 	player := g.Players[seat]
-	analysis := IsWinningHand(player.Hand, g.LaiziTile)
+	analysis := IsWinningHand(player.Hand, player.Melds, g.LaiziTile)
 	if !analysis.IsWin {
 		return errors.New("hand is not a winning hand")
 	}
@@ -484,7 +484,7 @@ func (g *Game) GetAvailableActions(seat int) []string {
 		}
 
 		// Check self-draw win
-		if IsWinningHand(player.Hand, g.LaiziTile).IsWin {
+		if IsWinningHand(player.Hand, player.Melds, g.LaiziTile).IsWin {
 			actions = append(actions, "hu")
 		}
 	}
@@ -498,7 +498,7 @@ func (g *Game) GetAvailableActions(seat int) []string {
 			discard := *g.LastDiscard
 			player := g.Players[seat]
 
-			if !g.Config.ZimoOnly && CanWinWithTile(player.Hand, discard, g.LaiziTile).IsWin {
+			if !g.Config.ZimoOnly && CanWinWithTile(player.Hand, discard, player.Melds, g.LaiziTile).IsWin {
 				actions = append(actions, "hu")
 			}
 			if CanOpenGang(player.Hand, discard) {
@@ -533,7 +533,7 @@ func (g *Game) checkForReactions(tile models.TileCode, discardSeat int) bool {
 		player := g.Players[seat]
 
 		canReact := false
-		if !g.Config.ZimoOnly && CanWinWithTile(player.Hand, tile, g.LaiziTile).IsWin {
+		if !g.Config.ZimoOnly && CanWinWithTile(player.Hand, tile, player.Melds, g.LaiziTile).IsWin {
 			canReact = true
 		}
 		if CanOpenGang(player.Hand, tile) {
@@ -669,7 +669,7 @@ func (g *Game) resolveDiscardWin(seat int) error {
 	copy(fullHand, player.Hand)
 	fullHand = append(fullHand, tile)
 
-	analysis := IsWinningHand(fullHand, g.LaiziTile)
+	analysis := IsWinningHand(fullHand, player.Melds, g.LaiziTile)
 
 	winCtx := WinContext{
 		Hand:         fullHand,
@@ -694,7 +694,7 @@ func (g *Game) resolveRobKong(seat int) error {
 	copy(fullHand, player.Hand)
 	fullHand = append(fullHand, tile)
 
-	analysis := IsWinningHand(fullHand, g.LaiziTile)
+	analysis := IsWinningHand(fullHand, player.Melds, g.LaiziTile)
 
 	winCtx := WinContext{
 		Hand:         fullHand,
@@ -774,6 +774,7 @@ func (g *Game) endRound(winnerSeat int, winCtx WinContext) error {
 	g.recordEvent("round_end", winnerSeat, map[string]interface{}{
 		"result":        "hu",
 		"win_type":      string(winCtx.WinType),
+		"winning_tile":  string(winCtx.WinningTile),
 		"scoring":       score.Breakdown,
 		"payments":      payments,
 		"total_scores":  g.Scores,

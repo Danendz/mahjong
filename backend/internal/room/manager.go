@@ -498,9 +498,11 @@ func (m *Manager) HandleReaction(code string, seat int, reaction engine.PlayerRe
 		return fmt.Errorf("no active game")
 	}
 
+	before := snapshotMelds(room)
 	if err := room.Game.DeclareReaction(seat, reaction); err != nil {
 		return err
 	}
+	m.broadcastMeldChanges(room, before)
 
 	return m.handlePhaseTransition(room)
 }
@@ -521,9 +523,11 @@ func (m *Manager) HandleClosedKong(code string, seat int, tile models.TileCode) 
 
 	m.stopTurnTimer(room)
 
+	before := snapshotMelds(room)
 	if err := room.Game.DeclareClosedKong(seat, tile); err != nil {
 		return err
 	}
+	m.broadcastMeldChanges(room, before)
 
 	seatVal := seat
 	m.hub.BroadcastToRoom(code, models.ServerMessage{
@@ -551,9 +555,11 @@ func (m *Manager) HandleAddKong(code string, seat int, tile models.TileCode) err
 
 	m.stopTurnTimer(room)
 
+	before := snapshotMelds(room)
 	if err := room.Game.DeclareAddKong(seat, tile); err != nil {
 		return err
 	}
+	m.broadcastMeldChanges(room, before)
 
 	seatVal := seat
 	m.hub.BroadcastToRoom(code, models.ServerMessage{
@@ -895,7 +901,7 @@ func (m *Manager) sendTurnNotification(room *Room) {
 	actions := game.GetAvailableActions(seat)
 	canGang := engine.FindClosedGangs(player.Hand)
 	canGang = append(canGang, engine.FindAddGangs(player.Hand, player.Melds)...)
-	canHu := engine.IsWinningHand(player.Hand, game.LaiziTile).IsWin
+	canHu := engine.IsWinningHand(player.Hand, player.Melds, game.LaiziTile).IsWin
 
 	timeLimit := room.Config.TurnTimer
 	wallRemaining := game.Wall.Remaining()
@@ -907,9 +913,15 @@ func (m *Manager) sendTurnNotification(room *Room) {
 
 	_ = actions // available actions computed by client from can_gang/can_hu
 
+	// Send the player's full closed hand so the client can re-sync after a meld
+	// removed tiles (chi/pong/gang). Cheap, and avoids drift on the client side.
+	handCopy := make([]models.TileCode, len(player.Hand))
+	copy(handCopy, player.Hand)
+
 	msg := models.ServerMessage{
 		Type:          models.MsgYourTurn,
 		DrawnTile:     drawnTile,
+		YourHand:      handCopy,
 		TimeLimit:     &timeLimit,
 		WallRemaining: &wallRemaining,
 		CanGang:       canGang,
@@ -918,7 +930,7 @@ func (m *Manager) sendTurnNotification(room *Room) {
 
 	// Score preview for self-draw hu
 	if canHu {
-		analysis := engine.IsWinningHand(player.Hand, game.LaiziTile)
+		analysis := engine.IsWinningHand(player.Hand, player.Melds, game.LaiziTile)
 		winCtx := engine.WinContext{
 			Hand:         player.Hand,
 			Melds:        player.Melds,
@@ -950,7 +962,7 @@ func (m *Manager) sendTurnNotification(room *Room) {
 			reduced := make([]models.TileCode, 0, len(player.Hand)-1)
 			reduced = append(reduced, player.Hand[:i]...)
 			reduced = append(reduced, player.Hand[i+1:]...)
-			for _, wt := range engine.FindWinningDiscards(reduced, game.LaiziTile) {
+			for _, wt := range engine.FindWinningDiscards(reduced, player.Melds, game.LaiziTile) {
 				if !seen[wt] {
 					seen[wt] = true
 					waitingTiles = append(waitingTiles, wt)
@@ -983,7 +995,7 @@ func (m *Manager) sendReactionPrompts(room *Room) {
 		var available []string
 		available = append(available, "pass")
 
-		if !game.Config.ZimoOnly && engine.CanWinWithTile(player.Hand, tile, game.LaiziTile).IsWin {
+		if !game.Config.ZimoOnly && engine.CanWinWithTile(player.Hand, tile, player.Melds, game.LaiziTile).IsWin {
 			available = append(available, "hu")
 		}
 		if engine.CanOpenGang(player.Hand, tile) {
@@ -1019,7 +1031,7 @@ func (m *Manager) sendReactionPrompts(room *Room) {
 				fullHand := make([]models.TileCode, len(player.Hand), len(player.Hand)+1)
 				copy(fullHand, player.Hand)
 				fullHand = append(fullHand, tile)
-				analysis := engine.IsWinningHand(fullHand, game.LaiziTile)
+				analysis := engine.IsWinningHand(fullHand, player.Melds, game.LaiziTile)
 				winCtx := engine.WinContext{
 					Hand:         fullHand,
 					Melds:        player.Melds,
@@ -1077,7 +1089,7 @@ func (m *Manager) scheduleBotTurn(room *Room, seat int) {
 	// Compute available actions
 	ctx.CanClosedGang = engine.FindClosedGangs(player.Hand)
 	ctx.CanAddGang = engine.FindAddGangs(player.Hand, player.Melds)
-	ctx.CanHu = engine.IsWinningHand(player.Hand, game.LaiziTile).IsWin
+	ctx.CanHu = engine.IsWinningHand(player.Hand, player.Melds, game.LaiziTile).IsWin
 
 	roomCode := room.Code
 	room.BotController.ScheduleTurnAction(seat, ctx, func(action bot.TurnAction) {
@@ -1213,7 +1225,7 @@ func (m *Manager) buildBotReactionContext(room *Room, seat int) bot.GameContext 
 		ctx.AvailableActions = []string{"hu", "pass"}
 	} else {
 		ctx.AvailableActions = []string{"pass"}
-		if !game.Config.ZimoOnly && engine.CanWinWithTile(player.Hand, tile, game.LaiziTile).IsWin {
+		if !game.Config.ZimoOnly && engine.CanWinWithTile(player.Hand, tile, player.Melds, game.LaiziTile).IsWin {
 			ctx.AvailableActions = append(ctx.AvailableActions, "hu")
 		}
 		if engine.CanOpenGang(player.Hand, tile) {
@@ -1268,11 +1280,29 @@ func (m *Manager) handleRoundEnd(room *Room) {
 	if result == "hu" {
 		winnerSeat := lastEvent.PlayerSeat
 		msg.WinnerSeat = &winnerSeat
-		msg.WinningHand = game.Players[winnerSeat].Hand
 
 		if wt, ok := lastEvent.Payload["win_type"].(string); ok {
 			msg.WinType = wt
 		}
+		if winTile, ok := lastEvent.Payload["winning_tile"].(string); ok && winTile != "" {
+			msg.WinningTile = models.TileCode(winTile)
+		}
+
+		// Construct the full winning hand: closed hand + winning tile (for discard/rob-kong).
+		// For self-draw, the drawn winning tile is already in player.Hand.
+		closed := make([]models.TileCode, len(game.Players[winnerSeat].Hand))
+		copy(closed, game.Players[winnerSeat].Hand)
+		if msg.WinType != "self_draw" && msg.WinningTile != "" {
+			closed = append(closed, msg.WinningTile)
+		}
+		msg.WinningHand = closed
+
+		// Include winner's melds so the client can render the full reconstruction
+		// (closed hand + each meld) without needing a separate game_state sync.
+		msg.OpenMelds = map[string][]models.MeldInfo{
+			fmt.Sprintf("%d", winnerSeat): game.Players[winnerSeat].Melds,
+		}
+
 		if scoring, ok := lastEvent.Payload["scoring"].(models.ScoringBreakdown); ok {
 			msg.Scoring = &scoring
 		}
@@ -1414,4 +1444,64 @@ func generateCode() string {
 		b[i] = codeAlphabet[n.Int64()]
 	}
 	return string(b)
+}
+
+// snapshotMelds captures each seat's melds before a state-changing action,
+// so subsequent diffing can detect new or mutated melds and broadcast them.
+// Caller must hold room.mu.
+func snapshotMelds(room *Room) [4][]models.MeldInfo {
+	var snap [4][]models.MeldInfo
+	if room.Game == nil {
+		return snap
+	}
+	for i := 0; i < 4; i++ {
+		src := room.Game.Players[i].Melds
+		snap[i] = make([]models.MeldInfo, len(src))
+		copy(snap[i], src)
+	}
+	return snap
+}
+
+// broadcastMeldChanges compares melds against a snapshot and broadcasts
+// MsgActionResolved for each newly added meld (chi/pong/open_gang/closed_gang)
+// and each mutated meld (pong → add_gang). Caller must hold room.mu.
+func (m *Manager) broadcastMeldChanges(room *Room, before [4][]models.MeldInfo) {
+	if room.Game == nil {
+		return
+	}
+	nextTurn := room.Game.CurrentTurn
+	for i := 0; i < 4; i++ {
+		after := room.Game.Players[i].Melds
+		seat := i
+
+		// Newly appended melds
+		for j := len(before[i]); j < len(after); j++ {
+			meld := after[j]
+			m.hub.BroadcastToRoom(room.Code, models.ServerMessage{
+				Type:          models.MsgActionResolved,
+				Seat:          &seat,
+				Action:        string(meld.Type),
+				TilesRevealed: meld.Tiles,
+				NextTurnSeat:  &nextTurn,
+			})
+		}
+
+		// Mutated melds (e.g., pong upgraded to add_gang)
+		limit := len(before[i])
+		if len(after) < limit {
+			limit = len(after)
+		}
+		for j := 0; j < limit; j++ {
+			if before[i][j].Type != after[j].Type {
+				meld := after[j]
+				m.hub.BroadcastToRoom(room.Code, models.ServerMessage{
+					Type:          models.MsgActionResolved,
+					Seat:          &seat,
+					Action:        string(meld.Type),
+					TilesRevealed: meld.Tiles,
+					NextTurnSeat:  &nextTurn,
+				})
+			}
+		}
+	}
 }

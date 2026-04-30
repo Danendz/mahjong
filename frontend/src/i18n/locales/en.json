@@ -86,14 +86,21 @@
       "huScorePreview": "{points}pts"
     },
     "meld": {
-      "chi": "吃",
-      "pong": "碰",
-      "openGang": "杠",
-      "closedGang": "暗杠",
-      "addGang": "补杠"
+      "chi": "Chi",
+      "pong": "Pong",
+      "openGang": "Gang",
+      "closedGang": "C.Gang",
+      "addGang": "+Gang"
     },
     "drawnLabel": "摸",
     "tenpaiLabel": "听",
+    "preempted": "{name}'s {their} preempted your {yours}",
+    "actionShort": {
+      "chi": "chi",
+      "pong": "pong",
+      "gang": "gang",
+      "hu": "hu"
+    },
     "laizi": {
       "label": "Laizi",
       "indicator": "翻",
@@ -123,7 +130,22 @@
     "delta": "{name}: {delta}",
     "rankedScore": "{name}: {score}",
     "nextRoundIn": "Next round in {countdown}s...",
-    "starting": "Starting..."
+    "starting": "Starting...",
+    "winningTileLabel": "winning tile",
+    "multipliers": {
+      "self_draw": "Self-draw",
+      "hard_hu": "Hard hu",
+      "kong_draw": "Kong draw",
+      "rob_kong": "Rob kong",
+      "last_tile": "Last tile",
+      "open_call": "Open call",
+      "peng_peng_hu": "All triplets",
+      "qing_yi_se": "Pure suit",
+      "gang_shang_kai_hua": "Kong-on-bloom",
+      "qiang_gang_hu": "Robbed kong",
+      "hai_di_lao_yue": "Last tile from sea",
+      "qi_dui": "Seven pairs"
+    }
   },
   "connection": {
     "connecting": "Connecting...",

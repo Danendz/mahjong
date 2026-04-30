@@ -86,14 +86,21 @@
       "huScorePreview": "{points}оч."
     },
     "meld": {
-      "chi": "吃",
-      "pong": "碰",
-      "openGang": "杠",
-      "closedGang": "暗杠",
-      "addGang": "补杠"
+      "chi": "Чи",
+      "pong": "Пэн",
+      "openGang": "Ган",
+      "closedGang": "З.Ган",
+      "addGang": "+Ган"
     },
     "drawnLabel": "摸",
     "tenpaiLabel": "听",
+    "preempted": "{name} перехватил ваш {yours} ({their})",
+    "actionShort": {
+      "chi": "чи",
+      "pong": "пэн",
+      "gang": "ган",
+      "hu": "ху"
+    },
     "laizi": {
       "label": "Лайцзы",
       "indicator": "翻",
@@ -123,7 +130,22 @@
     "delta": "{name}: {delta}",
     "rankedScore": "{name}: {score}",
     "nextRoundIn": "Следующий раунд через {countdown}с...",
-    "starting": "Начинаем..."
+    "starting": "Начинаем...",
+    "winningTileLabel": "плитка победы",
+    "multipliers": {
+      "self_draw": "Самосбор",
+      "hard_hu": "Жёсткое ху",
+      "kong_draw": "Замена после кана",
+      "rob_kong": "Перехват кана",
+      "last_tile": "Последняя плитка",
+      "open_call": "Открытая комб.",
+      "peng_peng_hu": "Все тройки",
+      "qing_yi_se": "Одна масть",
+      "gang_shang_kai_hua": "Цвет на кане",
+      "qiang_gang_hu": "Похищенный кан",
+      "hai_di_lao_yue": "Со дна моря",
+      "qi_dui": "Семь пар"
+    }
   },
   "connection": {
     "connecting": "Подключение...",

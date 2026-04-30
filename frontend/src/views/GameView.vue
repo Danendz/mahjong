@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, watch, TransitionGroup } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import { useGameConnection } from '../composables/useGameConnection'
 import { usePlayerName } from '../composables/usePlayerName'
@@ -15,22 +14,13 @@ import StatusBanner from '../components/game/StatusBanner.vue'
 import WallDisplay from '../components/game/WallDisplay.vue'
 import ScoringOverlay from '../components/game/ScoringOverlay.vue'
 import MahjongTile from '../components/game/MahjongTile.vue'
+import MeldCard from '../components/game/MeldCard.vue'
 
 defineProps<{ code: string }>()
 
-const { t } = useI18n()
 const gameStore = useGameStore()
 const conn = useGameConnection()
 const { playerName } = usePlayerName()
-
-const meldLabelKeys: Record<string, string> = {
-  chi: 'game.meld.chi',
-  pong: 'game.meld.pong',
-  open_gang: 'game.meld.openGang',
-  closed_gang: 'game.meld.closedGang',
-  add_gang: 'game.meld.addGang',
-}
-const meldLabel = (type: string) => t(meldLabelKeys[type] ?? '')
 
 // Seat positions relative to current player (table orientation)
 const acrossSeat = computed(() => (gameStore.yourSeat + 2) % 4)
@@ -76,7 +66,7 @@ watch(() => gameStore.turnVersion, () => {
       <PlayerArea :seat="rightSeat" position="right" />
     </div>
 
-    <!-- Self area (bottom) -->
+    <!-- Self area (bottom) — order: discards → actions → tenpai → melds dock → hand -->
     <div class="area-self" :class="{ 'active-turn': gameStore.isMyTurn }">
       <div v-if="myDiscards.length" class="self-discards">
         <span class="discard-label">{{ myName }}</span>
@@ -90,21 +80,6 @@ watch(() => gameStore.turnVersion, () => {
           />
         </div>
       </div>
-      <TransitionGroup v-if="myMelds.length" name="meld" tag="div" class="self-melds">
-        <div v-for="(meld, idx) in myMelds" :key="idx" class="self-meld">
-          <span class="meld-label">{{ meldLabel(meld.type) }}</span>
-          <div class="meld-tiles">
-            <MahjongTile
-              v-for="(tile, tidx) in meld.tiles"
-              :key="tidx"
-              :code="tile"
-              :is-laizi="tile === gameStore.laiziTile"
-              :face-down="meld.type === 'closed_gang'"
-              small
-            />
-          </div>
-        </div>
-      </TransitionGroup>
       <ActionBar
         @discard="conn.discard($event)"
         @pong="conn.declarePong()"
@@ -123,6 +98,15 @@ watch(() => gameStore.turnVersion, () => {
           small
         />
       </div>
+      <TransitionGroup v-if="myMelds.length" name="meld" tag="div" class="self-melds">
+        <MeldCard
+          v-for="(meld, idx) in myMelds"
+          :key="idx"
+          :type="meld.type"
+          :tiles="meld.tiles"
+          :laizi-tile="gameStore.laiziTile"
+        />
+      </TransitionGroup>
       <PlayerHand @discard="conn.discard($event)" />
     </div>
 
@@ -197,29 +181,13 @@ watch(() => gameStore.turnVersion, () => {
   gap: $spacing-sm;
 }
 
-// Self melds (pong, chi, gang)
+// Self melds dock — sits directly above the hand
 .self-melds {
   display: flex;
+  flex-wrap: wrap;
   gap: $spacing-md;
   justify-content: center;
-}
-
-.self-meld {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.meld-label {
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: $color-text-muted;
-}
-
-.meld-tiles {
-  display: flex;
-  gap: 1px;
+  padding-top: 6px;  // room for the corner badge
 }
 
 // Self discards
@@ -243,14 +211,20 @@ watch(() => gameStore.turnVersion, () => {
   max-width: 350px;
 }
 
-// Meld claim animation
+// Meld claim animation — fade + scale + brief pulse
 .meld-enter-active {
   transition: all 0.3s ease-out;
+  animation: meldPulse 0.6s ease-out 0.3s 1;
 }
 
 .meld-enter-from {
   opacity: 0;
   transform: scale(0.8);
+}
+
+@keyframes meldPulse {
+  0%, 100% { filter: none; }
+  50% { filter: brightness(1.25) saturate(1.2); }
 }
 
 // Tenpai hint
@@ -286,6 +260,10 @@ watch(() => gameStore.turnVersion, () => {
 
   .area-center {
     gap: $spacing-xs;
+  }
+
+  .self-melds {
+    gap: $spacing-sm;
   }
 }
 
